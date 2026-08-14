@@ -1,0 +1,1833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EscrowX — AI-Powered Web3 Escrow</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; background: #0B0E17; }
+  #root { min-height: 100vh; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin 1s linear infinite; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- ============================== ICON LIBRARY ==============================
+     Standalone HTML has no lucide-react package, so the icon set used by the
+     original component (lucide-react) is reproduced here as inline SVG data
+     sourced from the official lucide icon set, wrapped in tiny React
+     components with the same names used throughout the app (Wallet, Bell,
+     ShieldCheck, etc.) so the rest of the code needs no changes.
+============================================================================ -->
+<script type="text/babel" data-presets="react">
+const { useState, useRef, useEffect } = React;
+
+const ICONS = {
+  Wallet: "<path d=\"M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1\" /> <path d=\"M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4\" />",
+  Bell: "<path d=\"M10.268 21a2 2 0 0 0 3.464 0\" /> <path d=\"M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326\" />",
+  ShieldCheck: "<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\" /> <path d=\"m9 12 2 2 4-4\" />",
+  CheckCircle2: "<path d=\"M21.801 10A10 10 0 1 1 17 3.335\" /> <path d=\"m9 11 3 3L22 4\" />",
+  Clock: "<circle cx=\"12\" cy=\"12\" r=\"10\" /> <path d=\"M12 6v6l4 2\" />",
+  AlertTriangle: "<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /> <path d=\"M12 9v4\" /> <path d=\"M12 17h.01\" />",
+  ArrowRight: "<path d=\"M5 12h14\" /> <path d=\"m12 5 7 7-7 7\" />",
+  Plus: "<path d=\"M5 12h14\" /> <path d=\"M12 5v14\" />",
+  FileText: "<path d=\"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z\" /> <path d=\"M14 2v5a1 1 0 0 0 1 1h5\" /> <path d=\"M10 9H8\" /> <path d=\"M16 13H8\" /> <path d=\"M16 17H8\" />",
+  MessageSquare: "<path d=\"M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z\" />",
+  Sparkles: "<path d=\"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z\" /> <path d=\"M20 2v4\" /> <path d=\"M22 4h-4\" /> <circle cx=\"4\" cy=\"20\" r=\"2\" />",
+  X: "<path d=\"M18 6 6 18\" /> <path d=\"m6 6 12 12\" />",
+  Upload: "<path d=\"M12 3v12\" /> <path d=\"m17 8-5-5-5 5\" /> <path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" />",
+  LinkIcon: "<path d=\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\" /> <path d=\"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\" />",
+  ChevronDown: "<path d=\"m6 9 6 6 6-6\" />",
+  ChevronRight: "<path d=\"m9 18 6-6-6-6\" />",
+  Trash2: "<path d=\"M10 11v6\" /> <path d=\"M14 11v6\" /> <path d=\"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6\" /> <path d=\"M3 6h18\" /> <path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\" />",
+  Send: "<path d=\"M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z\" /> <path d=\"m21.854 2.147-10.94 10.939\" />",
+  Gavel: "<path d=\"m14 13-8.381 8.38a1 1 0 0 1-3.001-3l8.384-8.381\" /> <path d=\"m16 16 6-6\" /> <path d=\"m21.5 10.5-8-8\" /> <path d=\"m8 8 6-6\" /> <path d=\"m8.5 7.5 8 8\" />",
+  History: "<path d=\"M3 12a9 9 0 1 0 2.64-6.36L3 8\" /> <path d=\"M3 3v5h5\" /> <path d=\"M12 7v5l4 2\" />",
+  LayoutGrid: "<rect width=\"7\" height=\"7\" x=\"3\" y=\"3\" rx=\"1\" /> <rect width=\"7\" height=\"7\" x=\"14\" y=\"3\" rx=\"1\" /> <rect width=\"7\" height=\"7\" x=\"14\" y=\"14\" rx=\"1\" /> <rect width=\"7\" height=\"7\" x=\"3\" y=\"14\" rx=\"1\" />",
+  UserCircle2: "<path d=\"M17.925 20.056a6 6 0 0 0-11.851.001\" /> <circle cx=\"12\" cy=\"11\" r=\"4\" /> <circle cx=\"12\" cy=\"12\" r=\"10\" />",
+  Loader2: "<path d=\"M21 12a9 9 0 1 1-6.219-8.56\" />",
+  Lock: "<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /> <path d=\"M7 11V7a5 5 0 0 1 10 0v4\" />",
+  Unlock: "<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /> <path d=\"M7 11V7a5 5 0 0 1 9.9-1\" />",
+  TrendingUp: "<path d=\"M16 7h6v6\" /> <path d=\"m22 7-8.5 8.5-5-5L2 17\" />"
+};
+
+function LucideIcon({ name, size = 24, color = "currentColor", strokeWidth = 2, style, className, onClick, ...rest }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={style}
+      className={className}
+      onClick={onClick}
+      dangerouslySetInnerHTML={{ __html: ICONS[name] }}
+      {...rest}
+    />
+  );
+}
+
+const Wallet = (props) => <LucideIcon name="Wallet" {...props} />;
+const Bell = (props) => <LucideIcon name="Bell" {...props} />;
+const ShieldCheck = (props) => <LucideIcon name="ShieldCheck" {...props} />;
+const CheckCircle2 = (props) => <LucideIcon name="CheckCircle2" {...props} />;
+const Clock = (props) => <LucideIcon name="Clock" {...props} />;
+const AlertTriangle = (props) => <LucideIcon name="AlertTriangle" {...props} />;
+const ArrowRight = (props) => <LucideIcon name="ArrowRight" {...props} />;
+const Plus = (props) => <LucideIcon name="Plus" {...props} />;
+const FileText = (props) => <LucideIcon name="FileText" {...props} />;
+const MessageSquare = (props) => <LucideIcon name="MessageSquare" {...props} />;
+const Sparkles = (props) => <LucideIcon name="Sparkles" {...props} />;
+const X = (props) => <LucideIcon name="X" {...props} />;
+const Upload = (props) => <LucideIcon name="Upload" {...props} />;
+const LinkIcon = (props) => <LucideIcon name="LinkIcon" {...props} />;
+const ChevronDown = (props) => <LucideIcon name="ChevronDown" {...props} />;
+const ChevronRight = (props) => <LucideIcon name="ChevronRight" {...props} />;
+const Trash2 = (props) => <LucideIcon name="Trash2" {...props} />;
+const Send = (props) => <LucideIcon name="Send" {...props} />;
+const Gavel = (props) => <LucideIcon name="Gavel" {...props} />;
+const History = (props) => <LucideIcon name="History" {...props} />;
+const LayoutGrid = (props) => <LucideIcon name="LayoutGrid" {...props} />;
+const UserCircle2 = (props) => <LucideIcon name="UserCircle2" {...props} />;
+const Loader2 = ({ className, ...props }) => <LucideIcon name="Loader2" className={`spin${className ? " " + className : ""}`} {...props} />;
+const Lock = (props) => <LucideIcon name="Lock" {...props} />;
+const Unlock = (props) => <LucideIcon name="Unlock" {...props} />;
+const TrendingUp = (props) => <LucideIcon name="TrendingUp" {...props} />;
+
+/* ============================== APP CODE (converted from EscrowX.jsx) ============================== */
+/* ============================== TOKENS ============================== */
+const C = {
+  bg: "#0B0E17",
+  bgAlt: "#10141F",
+  surface: "#161B29",
+  surface2: "#1E2436",
+  border: "#2A3145",
+  borderSoft: "#232B3E",
+  gold: "#C9A227",
+  goldSoft: "#E8C878",
+  green: "#3FBF8F",
+  red: "#E8615B",
+  blue: "#5B8DEF",
+  text: "#EDEFF4",
+  muted: "#8D93A6",
+  faint: "#5C6478",
+};
+const FONT_DISPLAY = "'Fraunces', serif";
+const FONT_BODY = "'Inter', sans-serif";
+const FONT_MONO = "'IBM Plex Mono', monospace";
+
+const FontLoader = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 4px; }
+    @keyframes pulseGlow { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { animation: fadeUp .35s ease both; }
+    input, textarea, select { font-family: ${FONT_BODY}; outline: none; }
+    input::placeholder, textarea::placeholder { color: ${C.faint}; }
+    button { font-family: ${FONT_BODY}; cursor: pointer; }
+  `}</style>
+);
+
+/* ============================== HELPERS ============================== */
+let _id = 0;
+const uid = (p = "id") => { _id += 1; return `${p}_${_id}_${Math.random().toString(36).slice(2, 7)}`; };
+const money = (n) => `$${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+const shortAddr = (a) => a ? `${a.slice(0, 6)}...${a.slice(-4)}` : "";
+const fakeHash = () => "0x" + Array.from({ length: 64 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join("");
+const fakeAddr = () => "0x" + Array.from({ length: 40 }, () => "0123456789ABCDEF"[Math.floor(Math.random() * 16)]).join("");
+const nowStamp = () => new Date().toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+const parseDate = (s) => { const d = s ? new Date(s) : null; return d && !isNaN(d) ? d : null; };
+const daysBetween = (a, b) => Math.round((a.getTime() - b.getTime()) / 86400000);
+// Today as a local-time YYYY-MM-DD string, for <input type="date" min> and past-date
+// checks. Built from local parts (not toISOString) so it doesn't shift a day for
+// users behind UTC.
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+// ISO date strings compare correctly as plain strings, so "past" is a simple <.
+const isPastDate = (s) => !!s && s < todayISO();
+// Furthest-out date a new project's deadline can be set to: 12 months from today,
+// so clients are steered toward near-term deadlines (6-12 months out) rather than
+// distant/open-ended ones. Built from local date parts, same reasoning as todayISO.
+const maxDeadlineISO = () => {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 12);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const isTooFarDate = (s) => !!s && s > maxDeadlineISO();
+const prettyDate = (s) => { const d = parseDate(s); return d ? d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : s; };
+
+const MILESTONE_FLOW = ["Pending", "In Progress", "Submitted", "AI Review", "Client Review", "Approved", "Paid"];
+
+/* ============================== RISK DETECTION SYSTEM ==============================
+   EscrowX's risk detection is an explainable, multi-signal engine. It is advisory
+   only: it never blocks, approves, or reverses any escrow action. All fund-movement
+   decisions remain with the client, the freelancer, and EscrowX's own dispute /
+   escrow logic elsewhere in this file. The engine below only ever WRITES to
+   `project.riskScore` — it has no side effects on milestones, payments, or escrow.
+====================================================================================== */
+
+// Lightweight account-reputation lookup. In production this would be pulled from
+// each account's on-platform history; here it's a small local table (keyed by the
+// display name used elsewhere in the app) with a neutral, clearly-flagged fallback
+// for counterparties EscrowX has no history on yet.
+const REPUTATION_DB = {
+  "Alex Morgan": { role: "client", rating: 4.7, completedProjects: 18, approvalRate: 0.95, onTimeRate: 0.93, unresolvedDisputes: 0, refundIncidents: 0, accountAgeMonths: 22, activityConsistency: "steady" },
+  "Alex Morgan (You)": { role: "client", rating: 4.7, completedProjects: 18, approvalRate: 0.95, onTimeRate: 0.93, unresolvedDisputes: 0, refundIncidents: 0, accountAgeMonths: 22, activityConsistency: "steady" },
+  "Sarah Chen": { role: "freelancer", rating: 4.8, completedProjects: 27, approvalRate: 0.96, onTimeRate: 0.96, unresolvedDisputes: 0, refundIncidents: 0, accountAgeMonths: 31, activityConsistency: "steady" },
+};
+const getReputation = (name, roleGuess) => {
+  const known = REPUTATION_DB[name];
+  if (known) return { name, isNew: false, ...known };
+  // Neutral, non-accusatory default for an account EscrowX has no track record on yet.
+  // Being new isn't treated as "risky" behavior — it's treated as "insufficient
+  // history", which is scored gently and explained plainly.
+  return { name, role: roleGuess, isNew: true, rating: null, completedProjects: 0, approvalRate: null, onTimeRate: null, unresolvedDisputes: 0, refundIncidents: 0, accountAgeMonths: 0, activityConsistency: "unknown" };
+};
+
+// Deterministic, explainable scoring engine. Returns a 0-100 riskScore (higher =
+// more worth a closer look), a neutral level label, and the individual signals
+// ("factors") that produced it — never a single opaque number.
+function computeRisk(proj) {
+  const factors = []; // { id, category, label, detail, tone: 'good'|'watch'|'caution', points }
+  let score = 0;
+  const add = (category, label, detail, points, tone) => {
+    score += points;
+    factors.push({ id: uid("rf"), category, label, detail, tone, points });
+  };
+
+  const total = proj.total || proj.milestones.reduce((s, m) => s + Number(m.amount || 0), 0) || 1;
+  const msCount = proj.milestones.length;
+  const maxShare = msCount ? Math.max(...proj.milestones.map((m) => Number(m.amount || 0))) / total : 0;
+
+  /* ---- 1. Project & milestone structure ---- */
+  // Concentration is only a separate signal when there are several milestones — for a
+  // single-milestone project it's the same observation as the lump-sum factor below,
+  // and scoring both would double-count one fact.
+  if (msCount < 2) {
+    add("Project structure", "Single lump-sum milestone", "The project has only one milestone, so the full amount is due at once with no incremental checkpoint along the way.", 12, "caution");
+  } else if (maxShare > 0.5) {
+    add("Project structure", "Payment concentration", `One milestone represents ${Math.round(maxShare * 100)}% of total value — if it fails or is disputed, a large share of funds is affected at once.`, 14, "caution");
+  } else if (maxShare > 0.35) {
+    add("Project structure", "Uneven milestone sizing", `The largest milestone represents ${Math.round(maxShare * 100)}% of total value.`, 6, "watch");
+  } else {
+    add("Project structure", "Balanced milestone sizing", "Payments are broken into reasonably even milestones, which limits exposure if any single one has an issue.", 0, "good");
+  }
+  const tightGaps = proj.milestones.filter((m, i) => {
+    if (i === 0) return false;
+    const prev = parseDate(proj.milestones[i - 1].deadline), cur = parseDate(m.deadline);
+    return prev && cur && daysBetween(cur, prev) < 5;
+  }).length;
+  if (tightGaps > 0) {
+    add("Project structure", "Tight milestone spacing", `${tightGaps} milestone deadline${tightGaps > 1 ? "s sit" : " sits"} less than 5 days after the previous one, leaving little review buffer.`, Math.min(8, tightGaps * 4), "watch");
+  }
+  // Front-loaded payment: a large first milestone means money leaves escrow before
+  // much of the work has been demonstrated.
+  if (msCount > 1) {
+    const firstShare = Number(proj.milestones[0].amount || 0) / total;
+    if (firstShare > 0.5) {
+      add("Project structure", "Front-loaded payment schedule", `The first milestone alone is ${Math.round(firstShare * 100)}% of the project value, so most of the money is committed before later work is demonstrated.`, 8, "caution");
+    } else if (firstShare > 0.35) {
+      add("Project structure", "Slightly front-loaded schedule", `The first milestone is ${Math.round(firstShare * 100)}% of the project value.`, 4, "watch");
+    }
+  }
+
+  /* ---- 1b. Scope clarity — vague or incomplete milestone definitions ---- */
+  const vagueMs = proj.milestones.filter((m) => !m.description || String(m.description).trim().length < 25).length;
+  if (vagueMs > 0) {
+    add("Scope clarity", "Loosely specified deliverable(s)", `${vagueMs} milestone${vagueMs > 1 ? "s have" : " has"} little or no written description. Thin acceptance criteria are the most common source of later disagreement about whether work was delivered.`, Math.min(10, vagueMs * 5), "caution");
+  } else {
+    add("Scope clarity", "Deliverables are clearly described", "Every milestone states what must be delivered, which gives both sides a concrete standard to review against.", 0, "good");
+  }
+  const noDeadlineMs = proj.milestones.filter((m) => !m.deadline).length;
+  if (noDeadlineMs > 0) {
+    add("Scope clarity", "Milestone(s) without a deadline", `${noDeadlineMs} milestone${noDeadlineMs > 1 ? "s have" : " has"} no date attached, so lateness can't be measured objectively.`, Math.min(8, noDeadlineMs * 4), "watch");
+  }
+  const pastProjectDeadline = proj.milestones.filter((m) => m.deadline && proj.deadline && m.deadline > proj.deadline).length;
+  if (pastProjectDeadline > 0) {
+    add("Scope clarity", "Milestone scheduled after the project deadline", `${pastProjectDeadline} milestone${pastProjectDeadline > 1 ? "s are" : " is"} due after the project's own final deadline, so the schedule is internally inconsistent.`, 7, "caution");
+  }
+
+  /* ---- 1c. Financial exposure ---- */
+  // Scales with order of magnitude rather than stepping at arbitrary thresholds, so
+  // two projects of different size rarely score identically.
+  const exposurePoints = Math.max(0, Math.min(9, Math.round(Math.log10(Math.max(total, 1) / 500) * 4)));
+  if (exposurePoints > 0) {
+    add("Financial exposure", "Larger amount at stake", `${money(total)} is held against this engagement. Larger balances raise the cost of any single milestone going wrong.`, exposurePoints, exposurePoints >= 6 ? "caution" : "watch");
+  } else {
+    add("Financial exposure", "Modest total exposure", `${money(total)} is a small balance to have in escrow, which limits the downside of any single disagreement.`, 0, "good");
+  }
+
+  /* ---- 1d. Timeline pressure ---- */
+  const finalDeadline = parseDate(proj.deadline);
+  if (finalDeadline) {
+    const daysToDeadline = daysBetween(finalDeadline, new Date());
+    if (daysToDeadline < 0) {
+      add("Timeline", "Project deadline has already passed", `The stated final deadline (${proj.deadline}) is in the past.`, 12, "caution");
+    } else if (daysToDeadline <= 7) {
+      add("Timeline", "Very compressed timeline", `Only ${daysToDeadline} day${daysToDeadline === 1 ? "" : "s"} remain until the final deadline, leaving almost no room for review or revision.`, 10, "caution");
+    } else if (daysToDeadline <= 21) {
+      add("Timeline", "Tight timeline", `${daysToDeadline} days remain until the final deadline across ${msCount} milestone${msCount === 1 ? "" : "s"}.`, 5, "watch");
+    } else if (daysToDeadline <= 45) {
+      add("Timeline", "Moderate timeline", `${daysToDeadline} days remain until the final deadline.`, 2, "watch");
+    } else if (daysToDeadline > 240) {
+      add("Timeline", "Long project horizon", `The final deadline is ${daysToDeadline} days out. Long engagements are more exposed to changing scope and availability on both sides.`, 3, "watch");
+    } else {
+      add("Timeline", "Comfortable timeline", `${daysToDeadline} days remain until the final deadline, leaving room for review and revision.`, 0, "good");
+    }
+    if (msCount > 0 && daysToDeadline > 0 && daysToDeadline / msCount < 7) {
+      add("Timeline", "Little time per milestone", `That works out to roughly ${Math.max(1, Math.round(daysToDeadline / msCount))} day${Math.round(daysToDeadline / msCount) === 1 ? "" : "s"} per milestone including review time.`, 4, "watch");
+    }
+  }
+
+  /* ---- 1e. Contractual protections the client opted into ---- */
+  const ruleCount = (proj.refundRules || []).length;
+  if (ruleCount === 0) {
+    add("Refund protections", "No refund rules attached", "This engagement has no smart refund rules, so there is no pre-agreed outcome if work is late, cancelled, or rejected.", 9, "caution");
+  } else if (ruleCount === 1) {
+    add("Refund protections", "Minimal refund protection", "Only one refund rule is attached, so several common failure cases have no pre-agreed outcome.", 4, "watch");
+  } else if (ruleCount >= 3) {
+    add("Refund protections", "Strong refund protections", `${ruleCount} smart refund rules are attached, covering the common ways an engagement can go wrong.`, 0, "good");
+  }
+
+  /* ---- 2 & 3. Account reputation, completed work, and ratings ---- */
+  const clientRep = getReputation(proj.client, "client");
+  const freelancerRep = getReputation(proj.freelancer, "freelancer");
+  [["Client", clientRep], ["Freelancer", freelancerRep]].forEach(([label, rep]) => {
+    if (rep.isNew) {
+      add("Account reputation", `${label} has no prior history`, `${rep.name} has no completed projects on EscrowX yet. This isn't evidence of a problem — just a gap in track record, so early milestones carry more inherent uncertainty.`, 10, "watch");
+      return;
+    }
+    if (rep.rating >= 4.5 && rep.completedProjects >= 5) {
+      add("Account reputation", `${label} has a strong track record`, `${rep.name} — ${rep.rating}/5 rating across ${rep.completedProjects} completed projects.`, 0, "good");
+    } else if (rep.rating < 3.8 || rep.completedProjects < 3) {
+      add("Account reputation", `${label} has a limited or mixed track record`, `${rep.name} — ${rep.rating != null ? rep.rating + "/5 rating, " : ""}${rep.completedProjects} completed project${rep.completedProjects === 1 ? "" : "s"}.`, 10, "caution");
+    }
+  });
+
+  /* ---- 4. On-time delivery & reliability ---- */
+  [["Client", clientRep], ["Freelancer", freelancerRep]].forEach(([label, rep]) => {
+    if (rep.onTimeRate == null) return;
+    if (rep.onTimeRate < 0.75) add("Reliability", `${label} on-time rate is below average`, `${rep.name} has delivered/responded on time ${Math.round(rep.onTimeRate * 100)}% of the time historically.`, 10, "caution");
+    else if (rep.onTimeRate < 0.9) add("Reliability", `${label} on-time rate is moderate`, `${rep.name}'s historical on-time rate is ${Math.round(rep.onTimeRate * 100)}%.`, 4, "watch");
+  });
+  const overdue = proj.milestones.filter((m) => {
+    if (m.status === "Paid" || m.status === "Pending") return false;
+    const dl = parseDate(m.deadline);
+    return dl && daysBetween(new Date(), dl) > 0;
+  });
+  if (overdue.length > 0) {
+    add("Reliability", "Active milestone(s) past their deadline", `${overdue.length} in-progress milestone${overdue.length > 1 ? "s are" : " is"} past its stated deadline in this engagement.`, Math.min(15, overdue.length * 8), "caution");
+  }
+  const paidLate = proj.milestones.filter((m) => m.status === "Paid" && m.deadline && m.paidAtDate && m.paidAtDate > parseDate(m.deadline));
+
+  /* ---- 5. Dispute history ---- */
+  const openDisputes = proj.disputes.filter((d) => d.status === "Open").length;
+  const resolvedDisputes = proj.disputes.filter((d) => d.status === "Resolved").length;
+  if (openDisputes > 0) add("Dispute history", "Open dispute on this engagement", `${openDisputes} dispute${openDisputes > 1 ? "s are" : " is"} currently open and unresolved.`, Math.min(15, openDisputes * 12), "caution");
+  if (resolvedDisputes > 0) add("Dispute history", "Past dispute on this engagement", `${resolvedDisputes} dispute${resolvedDisputes > 1 ? "s have" : " has"} been raised and resolved previously in this project.`, Math.min(8, resolvedDisputes * 4), "watch");
+  const priorDisputes = (clientRep.unresolvedDisputes || 0) + (freelancerRep.unresolvedDisputes || 0);
+  if (priorDisputes > 0) add("Dispute history", "Unresolved disputes on an account", `A party to this engagement has ${priorDisputes} unresolved dispute${priorDisputes > 1 ? "s" : ""} elsewhere on the platform.`, Math.min(15, priorDisputes * 10), "caution");
+  if (openDisputes === 0 && resolvedDisputes === 0 && priorDisputes === 0) {
+    add("Dispute history", "No dispute history", "Neither party has an open, past, or platform-wide unresolved dispute associated with this engagement.", 0, "good");
+  }
+
+  /* ---- 6. Payment & refund behavior ---- */
+  const totalRevisions = proj.milestones.reduce((s, m) => s + (m.revisions || 0), 0);
+  if (totalRevisions >= 3) add("Payment & refund behavior", "Repeated revision requests", `${totalRevisions} revision rounds have been requested across this project's milestones so far.`, 6, "watch");
+  const refundTx = (proj.transactions || []).filter((t) => /refund/i.test(t.type)).length;
+  if (refundTx > 0 || (clientRep.refundIncidents || 0) + (freelancerRep.refundIncidents || 0) > 0) {
+    add("Payment & refund behavior", "Refund activity on record", "There is refund history associated with this engagement or one of the accounts involved.", 6, "watch");
+  } else {
+    add("Payment & refund behavior", "No refund activity", "No refunds have been triggered on this engagement so far.", 0, "good");
+  }
+
+  /* ---- 7. Account / activity patterns ---- */
+  [["Client", clientRep], ["Freelancer", freelancerRep]].forEach(([label, rep]) => {
+    if (rep.isNew) return; // already counted above
+    if (rep.accountAgeMonths < 1) add("Account activity", `${label} account is brand new`, `${rep.name}'s account was created under a month ago.`, 8, "caution");
+    else if (rep.accountAgeMonths < 3) add("Account activity", `${label} account is fairly new`, `${rep.name}'s account is ${rep.accountAgeMonths} months old.`, 3, "watch");
+  });
+
+  /* ---- 8 & 9. Deliverable quality & AI-based deliverable analysis ---- */
+  const analyzed = proj.milestones.filter((m) => m.aiAnalysis);
+  if (analyzed.length === 0) {
+    add("Deliverable quality", "No deliverables analyzed yet", "No milestone submissions have been reviewed by the AI verification module yet, so deliverable quality can't be factored in.", 0, "watch");
+  } else {
+    const avgConfidence = Math.round(analyzed.reduce((s, m) => s + (m.aiAnalysis.confidence || 0), 0) / analyzed.length);
+    const failingChecks = analyzed.reduce((s, m) => s + (m.aiAnalysis.checks || []).filter((c) => c.pass === false || c.pass === "warn").length, 0);
+    if (avgConfidence >= 85 && failingChecks === 0) {
+      add("Deliverable quality", "AI review of submissions is strong", `Average AI match confidence across ${analyzed.length} reviewed submission${analyzed.length > 1 ? "s" : ""} is ${avgConfidence}%, with no failed requirement checks.`, 0, "good");
+    } else if (avgConfidence < 60 || failingChecks >= 3) {
+      add("Deliverable quality", "AI review flagged notable gaps", `Average AI match confidence is ${avgConfidence}% with ${failingChecks} requirement check${failingChecks === 1 ? "" : "s"} flagged as failed or needing attention.`, 12, "caution");
+    } else {
+      add("Deliverable quality", "AI review found minor gaps", `Average AI match confidence is ${avgConfidence}%, with ${failingChecks} requirement check${failingChecks === 1 ? "" : "s"} flagged for attention.`, 5, "watch");
+    }
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  const level = score < 35 ? "Low" : score < 65 ? "Moderate" : "Elevated";
+  const cautionCount = factors.filter((f) => f.tone === "caution").length;
+  const summary = level === "Low"
+    ? "Signals across reputation, structure, and delivery history are broadly favorable."
+    : level === "Moderate"
+    ? `A mix of favorable and watch-worthy signals — ${cautionCount} factor${cautionCount === 1 ? "" : "s"} worth a closer look.`
+    : `Several signals point to elevated uncertainty — ${cautionCount} factor${cautionCount === 1 ? "" : "s"} flagged as a caution.`;
+
+  return { score, level, factors, summary, generatedAt: nowStamp() };
+}
+
+// Deterministic fallback recommendation text, used only when the AI call is
+// unavailable. This — like the AI-generated version — is advisory phrasing
+// layered on top of the deterministic score above, never a decision in itself.
+function fallbackRiskRecommendation(risk) {
+  if (risk.level === "Low") return "No action needed based on current signals. Continue with standard milestone review.";
+  if (risk.level === "Moderate") return "Consider reviewing flagged factors before approving the next milestone; standard escrow protections remain in place regardless.";
+  return "Recommend extra scrutiny on the next submission and clear documentation before releasing funds. This is advisory only — EscrowX does not block or alter any action automatically.";
+}
+
+// Recomputes the explainable risk assessment for a project and asks the AI module
+// for a short, clearly non-binding recommendation to accompany it. Only ever
+// writes to project.riskScore.
+async function assessRisk(proj) {
+  const risk = computeRisk(proj);
+  const prompt = `You are EscrowX's risk advisory assistant. You do NOT make decisions and you must NEVER label anyone a "scammer" or similar — use neutral terms only (Low Risk / Moderate Risk / Elevated Risk). Funds, approvals, and disputes are always decided by the client, freelancer, and EscrowX's own escrow logic — you only advise.
+Here is an explainable risk assessment already computed by EscrowX's risk detection system for this engagement:
+Score: ${risk.score}/100 (${risk.level} Risk)
+Signals considered: ${risk.factors.map((f) => `${f.label} (${f.category}, ${f.tone})`).join("; ")}
+Project: "${proj.title}" — total value $${proj.total}, ${proj.milestones.length} milestone(s).
+In ONE short sentence, give a specific, non-binding, practical recommendation for what the client should consider next given these signals (e.g. what to watch for, or that things look fine). Return ONLY plain text, no JSON, no markdown, under 220 characters.`;
+  const aiText = await callClaude(prompt);
+  return { ...risk, aiRecommendation: (aiText && aiText.length < 400) ? aiText.trim() : fallbackRiskRecommendation(risk) };
+}
+
+async function callClaude(prompt, { json = false } = {}) {
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    const data = await res.json();
+    const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+    if (json) {
+      const clean = text.replace(/```json|```/g, "").trim();
+      const start = clean.indexOf("{");
+      const end = clean.lastIndexOf("}");
+      return JSON.parse(clean.slice(start, end + 1));
+    }
+    return text.trim();
+  } catch (e) {
+    return null;
+  }
+}
+
+/* ============================== DEMO SEED ============================== */
+function seedDemoProject() {
+  const total = 2000;
+  const ms = [
+    { name: "UI Design", description: "Deliver a responsive design system and mockups for the storefront, product page, and checkout.", amount: 500, deadline: "2026-08-20" },
+    { name: "Frontend Build", description: "Implement the storefront UI in React with mobile-responsive layout and cart functionality.", amount: 700, deadline: "2026-09-05" },
+    { name: "Backend Integration", description: "Connect product catalog, payments, and order management to a live database.", amount: 500, deadline: "2026-09-20" },
+    { name: "Final Delivery", description: "QA pass, deploy to production, and handover documentation.", amount: 300, deadline: "2026-09-30" },
+  ].map((m) => ({
+    id: uid("ms"), ...m, status: "Pending", deliverable: null, aiAnalysis: null, paymentStatus: "Locked", revisions: 0,
+  }));
+  ms[0].status = "Paid"; ms[0].paymentStatus = "Released"; ms[0].paidAt = "Aug 21, 2026";
+  ms[1].status = "Paid"; ms[1].paymentStatus = "Released"; ms[1].paidAt = "Sep 6, 2026";
+  ms[2].status = "In Progress";
+
+  return {
+    id: uid("proj"),
+    title: "E-commerce Website",
+    description: "Full-stack e-commerce storefront with catalog, cart, and checkout.",
+    client: "Alex Morgan",
+    freelancer: "Sarah Chen",
+    assignmentStatus: "Accepted",
+    total,
+    deadline: "2026-09-30",
+    milestones: ms,
+    agreement: DEMO_AGREEMENT,
+    refundRules: ["Missed deadline by 3+ days → 20% partial refund on that milestone", "Cancelled before work begins → full refund", "Rejected after 2 revisions → eligible for dispute", "Mutual cancellation → refund remaining escrow balance"],
+    escrow: { deposited: true, amount: total, walletAddress: fakeAddr(), escrowId: "ESC-" + uid("").slice(-6).toUpperCase(), txStatus: "Confirmed (Simulated)", network: "Ethereum Sepolia · Testnet (Simulated)", timestamp: "Aug 3, 2026, 9:14 AM" },
+    riskScore: {
+      score: 18, level: "Low",
+      summary: "Signals across reputation, structure, and delivery history are broadly favorable.",
+      generatedAt: "Aug 3, 2026",
+      aiRecommendation: "No action needed based on current signals — continue with standard milestone review.",
+      factors: [
+        { id: "rf_demo_1", category: "Project structure", label: "Balanced milestone sizing", detail: "Payments are broken into reasonably even milestones (25%, 35%, 25%, 15% of total), which limits exposure if any single one has an issue.", tone: "good", points: 0 },
+        { id: "rf_demo_2", category: "Account reputation", label: "Client has a strong track record", detail: "Alex Morgan — 4.7/5 rating across 18 completed projects.", tone: "good", points: 0 },
+        { id: "rf_demo_3", category: "Account reputation", label: "Freelancer has a strong track record", detail: "Sarah Chen — 4.8/5 rating across 27 completed projects.", tone: "good", points: 0 },
+        { id: "rf_demo_4", category: "Reliability", label: "Consistent on-time delivery", detail: "Both milestones completed so far were approved and paid on or before their stated deadlines.", tone: "good", points: 0 },
+        { id: "rf_demo_5", category: "Dispute history", label: "No dispute history", detail: "Neither party has an open, past, or platform-wide unresolved dispute associated with this engagement.", tone: "good", points: 0 },
+        { id: "rf_demo_6", category: "Deliverable quality", label: "AI review of submissions is strong", detail: "Average AI match confidence across reviewed submissions is 96%, with no failed requirement checks.", tone: "good", points: 0 },
+      ],
+    },
+    disputes: [],
+    transactions: [
+      { id: uid("tx"), type: "Escrow Created", date: "Aug 3, 2026", amount: total, status: "Confirmed", wallet: shortAddr(fakeAddr()), txId: fakeHash().slice(0, 14) + "…", demo: true },
+      { id: uid("tx"), type: "Funds Deposited", date: "Aug 3, 2026", amount: total, status: "Confirmed", wallet: shortAddr(fakeAddr()), txId: fakeHash().slice(0, 14) + "…", demo: true },
+      { id: uid("tx"), type: "Milestone Approved", date: "Aug 21, 2026", amount: 500, status: "Confirmed", wallet: shortAddr(fakeAddr()), txId: fakeHash().slice(0, 14) + "…", demo: true },
+      { id: uid("tx"), type: "Payment Released", date: "Aug 21, 2026", amount: 500, status: "Confirmed", wallet: shortAddr(fakeAddr()), txId: fakeHash().slice(0, 14) + "…", demo: true },
+      { id: uid("tx"), type: "Milestone Approved", date: "Sep 6, 2026", amount: 700, status: "Confirmed", wallet: shortAddr(fakeAddr()), txId: fakeHash().slice(0, 14) + "…", demo: true },
+      { id: uid("tx"), type: "Payment Released", date: "Sep 6, 2026", amount: 700, status: "Confirmed", wallet: shortAddr(fakeAddr()), txId: fakeHash().slice(0, 14) + "…", demo: true },
+    ],
+    activity: [
+      { date: "Aug 3, 2026", text: "Agreement accepted by both parties." },
+      { date: "Aug 3, 2026", text: "Client funded escrow with $2,000." },
+      { date: "Aug 18, 2026", text: "Sarah Chen submitted Milestone 1: UI Design." },
+      { date: "Aug 18, 2026", text: "AI analysis: 96% requirement match. Recommendation: Approve." },
+      { date: "Aug 21, 2026", text: "Alex Morgan approved Milestone 1. $500 released." },
+      { date: "Sep 4, 2026", text: "Sarah Chen submitted Milestone 2: Frontend Build." },
+      { date: "Sep 6, 2026", text: "Alex Morgan approved Milestone 2. $700 released." },
+    ],
+  };
+}
+const DEMO_AGREEMENT = `SMART AGREEMENT — E-commerce Website
+
+Scope: Design, build, and deploy a full-stack e-commerce storefront including product catalog, shopping cart, checkout, and order management.
+
+Deliverables: Responsive UI design system, React frontend, backend integration with live database, production deployment with handover docs.
+
+Milestones & Payment:
+1. UI Design — $500
+2. Frontend Build — $700
+3. Backend Integration — $500
+4. Final Delivery — $300
+
+Deadlines: Final delivery due Sep 30, 2026. Each milestone carries its own interim deadline (see timeline).
+
+Acceptance Conditions: Client reviews each submission within 5 business days. AI provides a non-binding analysis against the milestone's stated requirements; final approval is always a client decision.
+
+Revision Limits: Up to 2 revision rounds per milestone at no extra cost. Additional rounds may be negotiated separately.
+
+Cancellation / Refund: See Smart Refund Rules attached to this agreement.
+
+Dispute Conditions: Either party may raise a dispute on a rejected or contested milestone. The AI dispute assistant reviews the agreement, submission, and both parties' statements to produce a recommendation. Funds are only released or refunded by explicit client or mutual action.`;
+
+/* ============================== SMALL UI PRIMITIVES ============================== */
+const Chip = ({ children, tone = "muted", style = {}, title }) => {
+  const tones = {
+    muted: { bg: "rgba(141,147,166,.12)", fg: C.muted, bd: C.border },
+    gold: { bg: "rgba(201,162,39,.14)", fg: C.goldSoft, bd: "rgba(201,162,39,.35)" },
+    green: { bg: "rgba(63,191,143,.12)", fg: C.green, bd: "rgba(63,191,143,.35)" },
+    red: { bg: "rgba(232,97,91,.12)", fg: C.red, bd: "rgba(232,97,91,.35)" },
+    blue: { bg: "rgba(91,141,239,.12)", fg: C.blue, bd: "rgba(91,141,239,.35)" },
+  }[tone];
+  return (
+    <span title={title} style={{ background: tones.bg, color: tones.fg, border: `1px solid ${tones.bd}`, borderRadius: 999, padding: "3px 10px", fontSize: 11.5, fontWeight: 600, letterSpacing: .2, display: "inline-flex", alignItems: "center", gap: 5, cursor: title ? "help" : "default", ...style }}>
+      {children}
+    </span>
+  );
+};
+
+const Btn = ({ children, onClick, variant = "primary", disabled, size = "md", style = {}, type = "button" }) => {
+  const base = { border: "none", borderRadius: 10, fontWeight: 600, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, transition: "all .15s", opacity: disabled ? .55 : 1, pointerEvents: disabled ? "none" : "auto" };
+  const sizes = { sm: { padding: "7px 12px", fontSize: 12.5 }, md: { padding: "10px 16px", fontSize: 13.5 }, lg: { padding: "13px 22px", fontSize: 14.5 } };
+  const variants = {
+    primary: { background: C.gold, color: "#1A1204" },
+    ghost: { background: "transparent", color: C.text, border: `1px solid ${C.border}` },
+    subtle: { background: C.surface2, color: C.text },
+    danger: { background: "rgba(232,97,91,.14)", color: C.red, border: `1px solid rgba(232,97,91,.35)` },
+    green: { background: C.green, color: "#062218" },
+  };
+  return (
+    <button type={type} onClick={onClick} disabled={disabled} style={{ ...base, ...sizes[size], ...variants[variant], ...style }}>
+      {children}
+    </button>
+  );
+};
+
+const Card = ({ children, style = {}, onClick }) => (
+  <div onClick={onClick} style={{ background: C.surface, border: `1px solid ${C.borderSoft}`, borderRadius: 16, padding: 20, ...style }}>
+    {children}
+  </div>
+);
+
+const Field = ({ label, children }) => (
+  <div style={{ marginBottom: 14 }}>
+    <div style={{ fontSize: 12, color: C.muted, marginBottom: 6, fontWeight: 600 }}>{label}</div>
+    {children}
+  </div>
+);
+
+const inputStyle = { width: "100%", background: C.bgAlt, border: `1px solid ${C.border}`, borderRadius: 9, padding: "10px 12px", color: C.text, fontSize: 13.5 };
+
+/* Signature element: circular ledger "stamp" for milestone status.
+   Shows a plain-language label first; the original technical status
+   is kept as a small secondary line so nothing is hidden, just de-emphasized. */
+const Stamp = ({ status, role }) => {
+  const map = {
+    Pending: { c: C.faint, icon: Clock, label: "Not Started Yet" },
+    "In Progress": { c: C.blue, icon: Loader2, label: "In Progress" },
+    Submitted: { c: C.blue, icon: Upload, label: role === "freelancer" ? "Waiting for Review" : "Needs Review" },
+    "AI Review": { c: C.gold, icon: Sparkles, label: "Needs Review", sub: "AI is checking it first" },
+    "Client Review": { c: C.gold, icon: UserCircle2, label: role === "client" ? "Needs Your Decision" : "Waiting on Client", sub: role === "client" ? "AI reviewed it — you decide" : undefined },
+    Approved: { c: C.green, icon: CheckCircle2, label: "Approved" },
+    Paid: { c: C.green, icon: Unlock, label: "Paid" },
+    "Revision Required": { c: C.red, icon: AlertTriangle, label: role === "freelancer" ? "Needs Changes" : "Revision Requested" },
+  };
+  const m = map[status] || map.Pending;
+  const Icon = m.icon;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ width: 30, height: 30, borderRadius: "50%", border: `2px dashed ${m.c}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <Icon size={14} color={m.c} />
+      </div>
+      <div>
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: m.c, lineHeight: 1.3 }}>{m.label}</div>
+        {m.sub && <div style={{ fontSize: 10, color: C.faint, lineHeight: 1.2 }}>{m.sub}</div>}
+      </div>
+    </div>
+  );
+};
+
+const ChainReceipt = ({ label = "Demo Transaction", hash, wallet, network }) => (
+  <div style={{ background: C.bgAlt, border: `1px dashed ${C.border}`, borderRadius: 10, padding: "10px 12px", fontFamily: FONT_MONO, fontSize: 11, color: C.muted }} title="This is a simulated blockchain record for the demo — no real crypto or money moved.">
+    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+      <span style={{ color: C.gold, fontWeight: 600 }}>◆ {label}</span>
+      <span>{network || "Ethereum Sepolia (Simulated)"}</span>
+    </div>
+    {hash && <div>tx: {hash.slice(0, 22)}…</div>}
+    {wallet && <div>wallet: {wallet}</div>}
+  </div>
+);
+
+const StatCard = ({ label, value, sub, icon: Icon, tone = C.text }) => (
+  <Card style={{ padding: 16 }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+      <span style={{ fontSize: 11.5, color: C.muted, fontWeight: 600, letterSpacing: .3, textTransform: "uppercase" }}>{label}</span>
+      {Icon && <Icon size={15} color={C.faint} />}
+    </div>
+    <div style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 600, color: tone }}>{value}</div>
+    {sub && <div style={{ fontSize: 11.5, color: C.faint, marginTop: 3 }}>{sub}</div>}
+  </Card>
+);
+
+const RiskBadge = ({ risk }) => {
+  if (!risk) return null;
+  const tone = risk.level === "Low" ? "green" : risk.level === "Moderate" ? "gold" : "red";
+  const dot = risk.level === "Low" ? "🟢" : risk.level === "Moderate" ? "🟠" : "🔴";
+  return <Chip tone={tone} title="EscrowX's explainable, non-binding risk assessment based on reputation, structure, reliability, disputes, and deliverable quality — not an accusation, and not a final decision.">{dot} {risk.level} Risk — {risk.score}/100</Chip>;
+};
+
+const RiskFactorRow = ({ f }) => {
+  const dotColor = f.tone === "good" ? C.green : f.tone === "caution" ? C.red : C.gold;
+  return (
+    <div style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: `1px solid ${C.borderSoft}` }}>
+      <div style={{ width: 8, height: 8, borderRadius: "50%", background: dotColor, marginTop: 5, flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12.5, fontWeight: 600 }}>{f.label} <span style={{ color: C.faint, fontWeight: 400 }}>· {f.category}</span></div>
+        <div style={{ fontSize: 12, color: C.muted, marginTop: 2, lineHeight: 1.45 }}>{f.detail}</div>
+      </div>
+    </div>
+  );
+};
+
+// Full explainable risk panel: score + level (via RiskBadge), the individual
+// signals that produced it, and a clearly-labeled non-binding AI recommendation.
+// EscrowX's risk detection evaluates trustworthiness and potential issues in the
+// engagement — it never decides whether funds move.
+const RiskPanel = ({ risk }) => {
+  if (!risk) return null;
+  return (
+    <Card>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>Risk Assessment</div>
+        <RiskBadge risk={risk} />
+      </div>
+      <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.5, marginBottom: 10 }}>{risk.summary}</div>
+      <div style={{ fontSize: 11, color: C.faint, fontWeight: 600, textTransform: "uppercase", letterSpacing: .3, marginBottom: 2 }}>Signals considered</div>
+      <div>
+        {risk.factors.map((f) => <RiskFactorRow key={f.id} f={f} />)}
+      </div>
+      {risk.aiRecommendation && (
+        <div style={{ background: "rgba(91,141,239,.08)", border: "1px solid rgba(91,141,239,.3)", borderRadius: 10, padding: "10px 12px", marginTop: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.blue, textTransform: "uppercase", letterSpacing: .3, marginBottom: 3 }}>AI Recommendation · Non-binding</div>
+          <div style={{ fontSize: 12.5, color: C.text, lineHeight: 1.5 }}>{risk.aiRecommendation}</div>
+        </div>
+      )}
+      <div style={{ fontSize: 11, color: C.faint, marginTop: 10, lineHeight: 1.5 }}>This assessment evaluates trustworthiness and potential issues for this engagement using reputation, structure, reliability, dispute, payment, and deliverable signals. It does not block, approve, or reverse any action — EscrowX and the parties involved always make the final call on funds.</div>
+    </Card>
+  );
+};
+
+const Modal = ({ title, onClose, children, width = 620 }) => ReactDOM.createPortal(
+  <div style={{ position: "fixed", inset: 0, background: "rgba(5,7,12,.7)", backdropFilter: "blur(2px)", display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 1000, padding: "40px 16px", overflowY: "auto" }} onClick={onClose}>
+    <div className="fade-up" onClick={(e) => e.stopPropagation()} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, width: "100%", maxWidth: width, padding: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 20, margin: 0, color: C.text }}>{title}</h3>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted }}><X size={20} /></button>
+      </div>
+      {children}
+    </div>
+  </div>,
+  document.body
+);
+
+/* ============================== LANDING PAGE ============================== */
+function Landing({ onDemo }) {
+  const steps = ["Agree", "Fund", "Build", "Verify", "Approve", "Release"];
+  return (
+    <div style={{ background: C.bg, minHeight: "100vh", color: C.text, fontFamily: FONT_BODY }}>
+      <FontLoader />
+      <div style={{ maxWidth: 1080, margin: "0 auto", padding: "28px 24px 100px" }}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 90 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 8, border: `2px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ShieldCheck size={16} color={C.gold} />
+            </div>
+            <span style={{ fontFamily: FONT_DISPLAY, fontSize: 19, fontWeight: 600 }}>EscrowX</span>
+          </div>
+        </div>
+
+        <div className="fade-up" style={{ textAlign: "center", marginBottom: 70 }}>
+          <Chip tone="gold" style={{ marginBottom: 22 }}><Sparkles size={12} /> AI-Powered Web3 Escrow</Chip>
+          <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(40px,7vw,74px)", fontWeight: 600, lineHeight: 1.05, margin: "0 0 20px" }}>
+            Build. Deliver.<br /><span style={{ color: C.gold, fontStyle: "italic" }}>Get Paid.</span> With Trust.
+          </h1>
+          <p style={{ color: C.muted, fontSize: 17, maxWidth: 520, margin: "0 auto 34px", lineHeight: 1.6 }}>
+            AI-powered Web3 escrow that protects both sides of every freelance transaction — funds locked on-chain, released only when work is verified.
+          </p>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            <Btn size="lg" onClick={onDemo}>Explore Demo</Btn>
+          </div>
+        </div>
+
+        <Card style={{ padding: "28px 20px", marginBottom: 60, background: C.surface }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
+            {steps.map((s, i) => (
+              <div key={s} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, minWidth: 64 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", border: `1.5px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT_MONO, fontSize: 12, color: C.gold }}>{i + 1}</div>
+                  <span style={{ fontSize: 12.5, color: C.muted, fontWeight: 600 }}>{s}</span>
+                </div>
+                {i < steps.length - 1 && <ArrowRight size={14} color={C.faint} style={{ marginBottom: 22 }} />}
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <div style={{ marginBottom: 20 }}>
+          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 28, textAlign: "center", marginBottom: 34 }}>Why EscrowX?</h2>
+          {(() => {
+            const features = [
+              { icon: Lock, t: "Trustless Payments", d: "Funds locked in escrow until milestone conditions are met — no intermediaries." },
+              { icon: Sparkles, t: "AI-Powered Verification", d: "Deliverables are analyzed against agreed requirements before you review." },
+              { icon: ShieldCheck, t: "Milestone Protection", d: "Break work into milestones so payment always tracks progress." },
+              { icon: History, t: "Transparent Transactions", d: "Every deposit, release, and refund is logged with a verifiable receipt." },
+              { icon: TrendingUp, t: "Built for Global Freelancing", d: "Works across borders — no bank delays, no chargebacks." },
+            ];
+            const topRow = features.slice(0, 3);
+            const bottomRow = features.slice(3);
+            const cardWidth = "calc((100% - 28px) / 3)";
+            const renderCard = (f) => (
+              <Card key={f.t} style={{ width: cardWidth, minWidth: 210 }}>
+                <f.icon size={20} color={C.gold} style={{ marginBottom: 12 }} />
+                <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 14.5 }}>{f.t}</div>
+                <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.5 }}>{f.d}</div>
+              </Card>
+            );
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 14, width: "100%", flexWrap: "wrap", justifyContent: "center" }}>
+                  {topRow.map(renderCard)}
+                </div>
+                <div style={{ display: "flex", gap: 14, width: "100%", flexWrap: "wrap", justifyContent: "center" }}>
+                  {bottomRow.map(renderCard)}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Navbar({ role, setRole, wallet, onConnect, notifications, view, setView, onOpenAssistant, unread, onViewNotifications, onBackToLogin, profile }) {
+  const [showNotif, setShowNotif] = useState(false);
+  const toggleNotif = () => {
+    setShowNotif((s) => {
+      const next = !s;
+      if (next) onViewNotifications();
+      return next;
+    });
+  };
+  return (
+    <div style={{ position: "sticky", top: 0, zIndex: 40, background: "rgba(11,14,23,.92)", backdropFilter: "blur(8px)", borderBottom: `1px solid ${C.borderSoft}` }}>
+      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => setView(role === "client" ? "client" : "freelancer")}>
+            <div style={{ width: 26, height: 26, borderRadius: 7, border: `2px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ShieldCheck size={13} color={C.gold} />
+            </div>
+            <span style={{ fontFamily: FONT_DISPLAY, fontSize: 16.5, fontWeight: 600, color: C.text }}>EscrowX</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }} title="Demo only: lets you preview the app from either side. In a real deployment, clients and freelancers would each have their own separate account.">
+            <span style={{ fontSize: 10.5, color: C.faint, fontWeight: 600, textTransform: "uppercase", letterSpacing: .4 }}>Viewing as</span>
+            <div style={{ display: "flex", background: C.surface2, borderRadius: 10, padding: 3 }}>
+              {["client", "freelancer"].map((r) => (
+                <button key={r} onClick={() => { setRole(r); setView(r); }} style={{ border: "none", background: role === r ? C.gold : "transparent", color: role === r ? "#1A1204" : C.muted, borderRadius: 8, padding: "6px 14px", fontSize: 12.5, fontWeight: 600, textTransform: "capitalize" }}>{r}</button>
+              ))}
+            </div>
+          </div>
+          <button onClick={() => setView("transactions")} style={{ background: "none", border: "none", color: view === "transactions" ? C.gold : C.muted, fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}><History size={14} /> Transactions</button>
+          {profile?.name && (
+            <span style={{ fontSize: 12, color: C.faint, display: "flex", alignItems: "center", gap: 5 }}><UserCircle2 size={13} /> {profile.name}</span>
+          )}
+          <button onClick={onBackToLogin} title="Log Out" style={{ background: "none", border: "none", color: C.faint, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 4, padding: 0 }}>
+            <ArrowRight size={12} style={{ transform: "rotate(180deg)" }} /> Log Out
+          </button>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ position: "relative" }}>
+            <button onClick={toggleNotif} style={{ background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 9, padding: 8, color: C.text, position: "relative" }}>
+              <Bell size={15} />
+              {unread > 0 && <span style={{ position: "absolute", top: -3, right: -3, background: C.red, color: "#fff", fontSize: 9, borderRadius: 999, minWidth: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{unread}</span>}
+            </button>
+            {showNotif && (
+              <div style={{ position: "absolute", right: 0, top: 40, width: 300, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 8, maxHeight: 340, overflowY: "auto" }}>
+                {notifications.length === 0 && <div style={{ padding: 14, color: C.faint, fontSize: 13 }}>No notifications yet.</div>}
+                {notifications.slice().reverse().map((n) => (
+                  <div key={n.id} style={{ padding: "9px 10px", borderRadius: 8, fontSize: 12.5, color: C.text, borderBottom: `1px solid ${C.borderSoft}` }}>
+                    <div>{n.text}</div>
+                    <div style={{ color: C.faint, fontSize: 10.5, marginTop: 2 }}>{n.time}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <Btn size="sm" variant="ghost" onClick={onOpenAssistant}><Sparkles size={13} /> Assistant</Btn>
+          {wallet.connected ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 9, padding: "7px 12px" }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.green }} />
+              <div style={{ fontFamily: FONT_MONO, fontSize: 11.5, color: C.text, lineHeight: 1.3 }}>
+                <div>{shortAddr(wallet.address)}</div>
+                <div style={{ color: C.faint, fontSize: 10 }}>{wallet.balance.toLocaleString()} USDC · Demo</div>
+              </div>
+            </div>
+          ) : (
+            <Btn size="sm" onClick={onConnect}><Wallet size={14} /> Connect Wallet</Btn>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== APP ============================== */
+function App() {
+  const [screen, setScreen] = useState("landing"); // landing | app
+  const [profile, setProfile] = useState(null); // { name, email }, shown in navbar when set
+  const [view, setView] = useState("client"); // client | freelancer | project | transactions
+  const [role, setRole] = useState("client");
+  const [wallet, setWallet] = useState({ connected: false, address: "", balance: 12450, network: "Ethereum Sepolia · Testnet (Simulated)" });
+  const [projects, setProjects] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [currentProjectId, setCurrentProjectId] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showAssistant, setShowAssistant] = useState(false);
+  const [unread, setUnread] = useState(0);
+  const [demoMode, setDemoMode] = useState(false);
+  const [toast, setToast] = useState(null);
+  const showToast = (text) => {
+    const tid = uid("toast");
+    setToast({ id: tid, text });
+    setTimeout(() => setToast((t) => (t && t.id === tid ? null : t)), 3200);
+  };
+
+  const currentProject = projects.find((p) => p.id === currentProjectId) || null;
+
+  const pushNotif = (text) => {
+    setNotifications((n) => [...n, { id: uid("ntf"), text, time: nowStamp() }]);
+    setUnread((u) => u + 1);
+  };
+  const updateProject = (id, updater) => {
+    setProjects((ps) => ps.map((p) => (p.id === id ? updater({ ...p }) : p)));
+  };
+  // Re-runs the explainable risk assessment using the project's latest state
+  // (new deliverable analysis, on-time/late outcome, dispute, revision, etc.)
+  // and writes the refreshed result to project.riskScore. Advisory only — never
+  // touches milestones, escrow, or payments.
+  const refreshRisk = (projId) => {
+    setProjects((ps) => {
+      const proj = ps.find((p) => p.id === projId);
+      if (proj) assessRisk(proj).then((risk) => updateProject(projId, (p) => { p.riskScore = risk; return p; }));
+      return ps;
+    });
+  };
+  const logActivity = (proj, text) => proj.activity.push({ date: nowStamp(), text });
+  const addTx = (proj, type, amount) => {
+    proj.transactions.push({ id: uid("tx"), type, date: nowStamp(), amount, status: "Confirmed", wallet: shortAddr(proj.escrow?.walletAddress || wallet.address), txId: fakeHash().slice(0, 14) + "…", demo: true });
+  };
+
+  const connectWallet = () => {
+    setWallet((w) => ({ ...w, address: fakeAddr() }));
+    setTimeout(() => setWallet((w) => ({ ...w, connected: true })), 500);
+  };
+
+  const enterDemo = () => {
+    const demo = seedDemoProject();
+    setProjects([demo]);
+    setWallet({ connected: true, address: fakeAddr(), balance: 12450, network: "Ethereum Sepolia · Testnet (Simulated)" });
+    setDemoMode(true);
+    pushNotif("Demo Mode loaded: E-commerce Website project ready.");
+    setScreen("app");
+    setRole("client");
+    setView("client");
+  };
+
+  const logout = () => {
+    setProfile(null);
+    setWallet({ connected: false, address: "", balance: 12450, network: "Ethereum Sepolia · Testnet (Simulated)" });
+    setScreen("landing");
+  };
+
+  /* ---- Project creation ---- */
+  const createProject = async (data) => {
+    const total = data.milestones.reduce((s, m) => s + Number(m.amount || 0), 0);
+    const proj = {
+      id: uid("proj"),
+      title: data.title, description: data.description, client: "Alex Morgan (You)", freelancer: data.freelancer,
+      total, deadline: data.deadline,
+      milestones: data.milestones.map((m) => ({ id: uid("ms"), ...m, amount: Number(m.amount), status: "Pending", deliverable: null, aiAnalysis: null, paymentStatus: "Locked", revisions: 0 })),
+      agreement: null, refundRules: data.refundRules,
+      escrow: { deposited: false, amount: total, walletAddress: null, escrowId: null, txStatus: null, network: wallet.network, timestamp: null },
+      // A newly created project is only ASSIGNED to the freelancer, not yet accepted.
+      // The agreement/escrow flow is gated on assignmentStatus === "Accepted" below.
+      assignmentStatus: "Pending",
+      riskScore: null, disputes: [], transactions: [], activity: [{ date: nowStamp(), text: `Project created and assigned to ${data.freelancer} — awaiting their acceptance.` }],
+    };
+    setProjects((ps) => [...ps, proj]);
+    setCurrentProjectId(proj.id);
+    pushNotif(`Project "${proj.title}" assigned to ${proj.freelancer} — awaiting their response.`);
+
+    // Explainable, multi-signal risk assessment (fire and forget with fallback).
+    // This never blocks project creation — it's advisory and attaches after the fact.
+    const risk = await assessRisk(proj);
+    updateProject(proj.id, (p) => { p.riskScore = risk; return p; });
+    return proj.id;
+  };
+
+  /* ---- Assignment accept / decline ---- */
+  // The freelancer's response to a client's project assignment. Nothing about the
+  // engagement (agreement generation, escrow deposit, milestone work) can proceed
+  // until this resolves to "Accepted" — see the gating in ProjectDetail.
+  const respondToAssignment = (projId, accept) => {
+    updateProject(projId, (p) => {
+      p.assignmentStatus = accept ? "Accepted" : "Declined";
+      logActivity(p, accept ? `${p.freelancer} accepted the project assignment.` : `${p.freelancer} declined the project assignment.`);
+      return p;
+    });
+    const proj = projects.find((p) => p.id === projId);
+    if (accept) {
+      pushNotif(`${proj?.freelancer || "Freelancer"} accepted "${proj?.title || "the project"}" — you can now generate the agreement and fund escrow.`);
+      showToast(`✓ Assignment accepted`);
+    } else {
+      pushNotif(`${proj?.freelancer || "Freelancer"} declined "${proj?.title || "the project"}".`);
+    }
+  };
+
+  const generateAgreement = async (projId) => {
+    const proj = projects.find((p) => p.id === projId);
+    updateProject(projId, (p) => { p.agreementLoading = true; return p; });
+    const prompt = `Draft a structured freelance smart escrow agreement in plain text (no markdown symbols) for a Web3 escrow platform called EscrowX. Include sections: Scope, Deliverables, Milestones & Payment (list each with amount), Deadlines, Acceptance Conditions, Revision Limits, Cancellation/Refund Conditions, Dispute Conditions. Keep it concise and professional.
+Project: "${proj.title}" — ${proj.description}
+Client: ${proj.client}. Freelancer: ${proj.freelancer}. Total: $${proj.total}. Deadline: ${proj.deadline}.
+Milestones: ${proj.milestones.map((m) => `${m.name} — $${m.amount}, due ${m.deadline}: ${m.description}`).join(" | ")}
+Refund rules to include verbatim: ${proj.refundRules.join("; ")}`;
+    const text = await callClaude(prompt);
+    updateProject(projId, (p) => {
+      p.agreement = text || fallbackAgreement(p);
+      p.agreementLoading = false;
+      return p;
+    });
+  };
+  const fallbackAgreement = (p) => `SMART AGREEMENT — ${p.title}\n\nScope: ${p.description}\n\nMilestones & Payment:\n${p.milestones.map((m, i) => `${i + 1}. ${m.name} — $${m.amount}`).join("\n")}\n\nDeadlines: Final delivery due ${p.deadline}.\n\nAcceptance Conditions: Client reviews each submission; AI provides a non-binding analysis. Final approval is a client decision.\n\nRevision Limits: Up to 2 revision rounds per milestone.\n\nCancellation/Refund:\n${p.refundRules.map((r) => "- " + r).join("\n")}\n\nDispute Conditions: Either party may raise a dispute; the AI dispute assistant provides a recommendation, not a final decision.`;
+
+  const depositEscrow = (projId) => {
+    updateProject(projId, (p) => { p.depositLoading = true; return p; });
+    setTimeout(() => {
+      updateProject(projId, (p) => {
+        p.escrow = { deposited: true, amount: p.total, walletAddress: fakeAddr(), escrowId: "ESC-" + uid("").slice(-6).toUpperCase(), txStatus: "Confirmed (Simulated)", network: wallet.network, timestamp: nowStamp() };
+        p.depositLoading = false;
+        p.milestones[0].status = "In Progress";
+        addTx(p, "Escrow Created", p.total);
+        addTx(p, "Funds Deposited", p.total);
+        logActivity(p, `Escrow funded with $${p.total}.`);
+        return p;
+      });
+      pushNotif(`Escrow funded — $${projects.find((p) => p.id === projId)?.total || ""} secured.`);
+    }, 1300);
+  };
+
+  /* ---- Milestone lifecycle ---- */
+  const submitDeliverable = (projId, msId, deliverable) => {
+    updateProject(projId, (p) => {
+      const m = p.milestones.find((x) => x.id === msId);
+      m.deliverable = deliverable; m.status = "Submitted"; m.aiAnalysis = null;
+      logActivity(p, `Freelancer submitted deliverable for "${m.name}".`);
+      return p;
+    });
+    pushNotif(`Deliverable submitted for milestone.`);
+  };
+
+  const analyzeDeliverable = async (projId, msId) => {
+    updateProject(projId, (p) => { const m = p.milestones.find((x) => x.id === msId); m.status = "AI Review"; m.analyzing = true; return p; });
+    const proj = projects.find((p) => p.id === projId);
+    const m = proj.milestones.find((x) => x.id === msId);
+    const prompt = `You are the AI deliverable verification module for EscrowX, a Web3 escrow platform. Compare the freelancer's submission against the milestone requirement and return ONLY JSON:
+{"checks": [{"label": "<short requirement check>", "pass": true|false|"warn"}], "confidence": <0-100 integer>, "recommendation": "<one short recommendation phrase like 'Approve' or 'Approve with minor revision' or 'Request revision'>", "notes": "<one sentence>"}
+Milestone requirement: "${m.description}"
+Freelancer submission (${m.deliverable.type}): "${m.deliverable.content}"
+Provide 3-5 checks relevant to the requirement.`;
+    const result = await callClaude(prompt, { json: true });
+    const analysis = result || {
+      checks: [{ label: "Deliverable matches core requirement", pass: true }, { label: "Submission format is complete", pass: true }, { label: "Minor details may need review", pass: "warn" }],
+      confidence: 84, recommendation: "Approve with minor revision", notes: "Submission appears to substantially satisfy the milestone requirement.",
+    };
+    updateProject(projId, (p) => {
+      const mm = p.milestones.find((x) => x.id === msId);
+      mm.aiAnalysis = analysis; mm.status = "Client Review"; mm.analyzing = false;
+      logActivity(p, `AI analysis complete for "${mm.name}": ${analysis.confidence}% confidence — ${analysis.recommendation}.`);
+      return p;
+    });
+    pushNotif(`AI analysis completed for a milestone — client approval required.`);
+    refreshRisk(projId);
+  };
+
+  const approveMilestone = (projId, msId) => {
+    updateProject(projId, (p) => {
+      const m = p.milestones.find((x) => x.id === msId);
+      m.status = "Paid"; m.paymentStatus = "Released"; m.paidAt = nowStamp(); m.paidAtDate = new Date();
+      addTx(p, "Milestone Approved", m.amount);
+      addTx(p, "Payment Released", m.amount);
+      logActivity(p, `Client approved "${m.name}". $${m.amount} released.`);
+      const idx = p.milestones.findIndex((x) => x.id === msId);
+      if (p.milestones[idx + 1] && p.milestones[idx + 1].status === "Pending") p.milestones[idx + 1].status = "In Progress";
+      return p;
+    });
+    pushNotif(`Payment released for milestone.`);
+    showToast(`✓ Payment released — funds sent to freelancer`);
+    refreshRisk(projId);
+  };
+
+  const requestRevision = (projId, msId) => {
+    updateProject(projId, (p) => {
+      const m = p.milestones.find((x) => x.id === msId);
+      m.status = "Revision Required"; m.revisions += 1;
+      logActivity(p, `Client requested revision on "${m.name}".`);
+      return p;
+    });
+    pushNotif(`Revision requested on a milestone.`);
+    refreshRisk(projId);
+  };
+
+  /* ---- Disputes ---- */
+  const raiseDispute = async (projId, msId, clientClaim, freelancerResponse) => {
+    const proj = projects.find((p) => p.id === projId);
+    const m = proj.milestones.find((x) => x.id === msId);
+    const disputeId = uid("dsp");
+    updateProject(projId, (p) => { p.disputes.push({ id: disputeId, milestoneId: msId, clientClaim, freelancerResponse, status: "Open", loading: true }); return p; });
+    const prompt = `You are the AI dispute assistant for EscrowX, a Web3 escrow platform. Review this milestone dispute and return ONLY JSON:
+{"summary": "<one sentence neutral summary of the disagreement>", "recommendation": "<a specific, non-binding recommendation, e.g. what % of payment to release and what should happen next>"}
+Agreement excerpt / milestone requirement: "${m.description}"
+Client claim: "${clientClaim}"
+Freelancer response: "${freelancerResponse}"
+Freelancer's submitted evidence: "${m.deliverable ? m.deliverable.content : "none provided"}"
+Be balanced and specific. Remember: you only recommend, you never make the final financial decision.`;
+    const result = await callClaude(prompt, { json: true });
+    const out = result || { summary: "The client and freelancer disagree on whether the milestone requirement was fully met.", recommendation: "Partial completion appears likely. Recommend one revision round before releasing 70% of the milestone payment." };
+    updateProject(projId, (p) => {
+      const d = p.disputes.find((x) => x.id === disputeId);
+      d.aiSummary = out.summary; d.aiRecommendation = out.recommendation; d.loading = false;
+      logActivity(p, `Dispute raised on "${m.name}". AI recommendation: ${out.recommendation}`);
+      return p;
+    });
+    pushNotif(`AI dispute analysis ready for review.`);
+    refreshRisk(projId);
+  };
+
+  const resolveDispute = (projId, disputeId, releaseFull) => {
+    updateProject(projId, (p) => {
+      const d = p.disputes.find((x) => x.id === disputeId);
+      d.status = "Resolved";
+      const m = p.milestones.find((x) => x.id === d.milestoneId);
+      if (releaseFull) {
+        m.status = "Paid"; m.paymentStatus = "Released"; m.paidAt = nowStamp(); m.paidAtDate = new Date();
+        addTx(p, "Dispute Resolved", m.amount);
+        addTx(p, "Payment Released", m.amount);
+      } else {
+        m.status = "Revision Required";
+        addTx(p, "Dispute Resolved", 0);
+      }
+      logActivity(p, `Dispute resolved for "${m.name}".`);
+      return p;
+    });
+    pushNotif(`Dispute resolved.`);
+    if (releaseFull) showToast(`✓ Payment released — funds sent to freelancer`);
+    refreshRisk(projId);
+  };
+
+  /* ---- Nav ---- */
+  const openProject = (id) => { setCurrentProjectId(id); setView("project"); };
+
+  // Wait for the saved-session check to finish before showing anything, so a
+  // returning logged-in user doesn't flash the landing page first.
+
+  if (screen === "landing") return <Landing onDemo={enterDemo} />;
+
+  return (
+    <div style={{ background: C.bg, minHeight: "100vh", color: C.text, fontFamily: FONT_BODY }}>
+      <FontLoader />
+      {demoMode && (
+        <div style={{ background: "linear-gradient(90deg, rgba(201,162,39,.16), rgba(201,162,39,.06))", borderBottom: `1px solid rgba(201,162,39,.3)`, textAlign: "center", padding: "6px 10px", fontSize: 12, color: C.goldSoft, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          <Sparkles size={12} /> Demo Mode — sample project loaded, all transactions below are simulated
+        </div>
+      )}
+      <Navbar role={role} setRole={setRole} wallet={wallet} onConnect={connectWallet} notifications={notifications} view={view} setView={setView} onOpenAssistant={() => setShowAssistant(true)} unread={unread} onViewNotifications={() => setUnread(0)} onBackToLogin={logout} profile={profile} />
+      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "24px 20px 80px" }}>
+        {view === "client" && (
+          <ClientDashboard projects={projects} onOpen={openProject} onCreate={() => setShowCreate(true)} wallet={wallet} />
+        )}
+        {view === "freelancer" && (
+          <FreelancerDashboard projects={projects} onOpen={openProject} onRespond={respondToAssignment} />
+        )}
+        {view === "transactions" && <TransactionsView projects={projects} />}
+        {view === "project" && currentProject && (
+          <ProjectDetail
+            project={currentProject} role={role}
+            onAcceptAssignment={() => respondToAssignment(currentProject.id, true)}
+            onDeclineAssignment={() => respondToAssignment(currentProject.id, false)}
+            onGenerateAgreement={() => generateAgreement(currentProject.id)}
+            onDeposit={() => depositEscrow(currentProject.id)}
+            onSubmitDeliverable={(msId, d) => submitDeliverable(currentProject.id, msId, d)}
+            onAnalyze={(msId) => analyzeDeliverable(currentProject.id, msId)}
+            onApprove={(msId) => approveMilestone(currentProject.id, msId)}
+            onRevision={(msId) => requestRevision(currentProject.id, msId)}
+            onDispute={(msId, c, f) => raiseDispute(currentProject.id, msId, c, f)}
+            onResolveDispute={(dId, full) => resolveDispute(currentProject.id, dId, full)}
+            onBack={() => setView(role)}
+          />
+        )}
+      </div>
+      {showCreate && (
+        <CreateProjectModal
+          onClose={() => setShowCreate(false)}
+          onCreate={async (data) => { const id = await createProject(data); setShowCreate(false); setView("project"); }}
+        />
+      )}
+      {showAssistant && <AssistantPanel project={currentProject} onClose={() => setShowAssistant(false)} />}
+      {toast && (
+        <div className="fade-up" style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: C.surface2, border: `1px solid rgba(63,191,143,.4)`, color: C.text, borderRadius: 12, padding: "12px 20px", fontSize: 13.5, fontWeight: 600, boxShadow: "0 10px 30px rgba(0,0,0,.4)", zIndex: 200, display: "flex", alignItems: "center", gap: 8 }}>
+          <CheckCircle2 size={16} color={C.green} /> {toast.text}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================== CLIENT DASHBOARD ============================== */
+function ClientDashboard({ projects, onOpen, onCreate, wallet }) {
+  const totalEscrow = projects.reduce((s, p) => s + (p.escrow?.deposited ? p.milestones.filter((m) => m.status !== "Paid").reduce((a, m) => a + m.amount, 0) : 0), 0);
+  const active = projects.filter((p) => p.milestones.some((m) => m.status !== "Paid"));
+  const completed = projects.filter((p) => p.milestones.every((m) => m.status === "Paid"));
+  const pendingApprovals = projects.reduce((s, p) => s + p.milestones.filter((m) => m.status === "Client Review").length, 0);
+  const totalReleased = projects.reduce((s, p) => s + p.milestones.filter((m) => m.status === "Paid").reduce((a, m) => a + m.amount, 0), 0);
+  const disputes = projects.reduce((s, p) => s + p.disputes.filter((d) => d.status === "Open").length, 0);
+  const needsAttention = pendingApprovals > 0 || disputes > 0;
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 28, margin: "0 0 4px" }}>Client Dashboard</h1>
+          <Chip tone="gold" style={{ marginRight: 8 }}><ShieldCheck size={12} /> Client Reputation ⭐ 4.7/5 · 18 projects · 95% approval rate</Chip>
+        </div>
+        <Btn onClick={onCreate}><Plus size={15} /> New Project</Btn>
+      </div>
+
+      {needsAttention && (
+        <Card style={{ marginBottom: 18, border: `1px solid rgba(201,162,39,.4)`, background: "rgba(201,162,39,.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(201,162,39,.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Clock size={16} color={C.gold} />
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>Needs your attention</div>
+              <div style={{ color: C.muted, fontSize: 12.5 }}>
+                {pendingApprovals > 0 && <>{pendingApprovals} milestone{pendingApprovals > 1 ? "s" : ""} waiting on your approval</>}
+                {pendingApprovals > 0 && disputes > 0 && " · "}
+                {disputes > 0 && <>{disputes} open dispute{disputes > 1 ? "s" : ""} to resolve</>}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 10 }}>
+        <StatCard label="In Escrow (Locked)" value={money(totalEscrow)} icon={Lock} tone={C.gold} />
+        <StatCard label="Active Projects" value={active.length} icon={LayoutGrid} />
+        <StatCard label="Total Paid Out" value={money(totalReleased)} icon={Unlock} tone={C.green} />
+      </div>
+      <div style={{ color: C.faint, fontSize: 12, marginBottom: 26 }}>{completed.length} project{completed.length === 1 ? "" : "s"} fully completed</div>
+
+      <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: C.muted, textTransform: "uppercase", letterSpacing: .4 }}>Active Projects</h2>
+      {projects.length === 0 && <EmptyState text="No projects yet. Create your first escrow to get started." />}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {projects.map((p) => <ProjectRow key={p.id} p={p} onOpen={onOpen} perspective="client" />)}
+      </div>
+    </div>
+  );
+}
+
+function ProjectRow({ p, onOpen, perspective }) {
+  const paid = p.milestones.filter((m) => m.status === "Paid").length;
+  const total = p.milestones.length;
+  const currentMs = p.milestones.find((m) => m.status !== "Paid");
+  const pending = p.milestones.filter((m) => m.status === "Client Review").reduce((s, m) => s + m.amount, 0);
+  return (
+    <Card style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ flex: "1 1 220px" }}>
+        <div style={{ fontWeight: 700, fontSize: 15.5, marginBottom: 3 }}>{p.title}</div>
+        <div style={{ color: C.muted, fontSize: 12.5 }}>{perspective === "client" ? `Freelancer: ${p.freelancer}` : `Client: ${p.client}`}</div>
+        <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+          <RiskBadge risk={p.riskScore} />
+          {(p.assignmentStatus || "Accepted") === "Pending" && <Chip tone="gold">{perspective === "client" ? "Awaiting Freelancer Response" : "Awaiting Your Response"}</Chip>}
+          {p.assignmentStatus === "Declined" && <Chip tone="red">Declined by Freelancer</Chip>}
+          {(p.assignmentStatus || "Accepted") === "Accepted" && !p.escrow?.deposited && <Chip tone="red">Awaiting Deposit</Chip>}
+        </div>
+      </div>
+      <div style={{ flex: "0 0 auto", textAlign: "center" }}>
+        <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: C.muted }}>Milestone {paid + (currentMs ? 1 : 0)}/{total}</div>
+        <div style={{ width: 110, height: 5, background: C.surface2, borderRadius: 4, marginTop: 6, overflow: "hidden" }}>
+          <div style={{ width: `${(paid / total) * 100}%`, height: "100%", background: C.gold }} />
+        </div>
+      </div>
+      <div style={{ flex: "0 0 auto", textAlign: "right" }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 600 }}>{money(p.total)}</div>
+        {pending > 0 && <div style={{ fontSize: 11.5, color: C.gold }}>{money(pending)} pending</div>}
+      </div>
+      <Btn variant="ghost" size="sm" onClick={() => onOpen(p.id)}>View Project <ChevronRight size={14} /></Btn>
+    </Card>
+  );
+}
+
+const EmptyState = ({ text }) => (
+  <Card style={{ textAlign: "center", padding: 40, color: C.faint }}>
+    <FileText size={22} style={{ marginBottom: 10, opacity: .5 }} />
+    <div style={{ fontSize: 13.5 }}>{text}</div>
+  </Card>
+);
+
+/* ============================== FREELANCER DASHBOARD ============================== */
+function FreelancerDashboard({ projects, onOpen, onRespond }) {
+  const pendingAssignments = projects.filter((p) => (p.assignmentStatus || "Accepted") === "Pending");
+  const visibleProjects = projects.filter((p) => (p.assignmentStatus || "Accepted") !== "Pending");
+  const active = visibleProjects.filter((p) => p.milestones.some((m) => m.status !== "Paid"));
+  const earned = projects.reduce((s, p) => s + p.milestones.filter((m) => m.status === "Paid").reduce((a, m) => a + m.amount, 0), 0);
+  const inProgress = projects.reduce((s, p) => s + p.milestones.filter((m) => ["In Progress", "Submitted", "AI Review", "Client Review"].includes(m.status)).length, 0);
+  const needsChanges = projects.reduce((s, p) => s + p.milestones.filter((m) => m.status === "Revision Required").length, 0);
+  return (
+    <div>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 28, margin: "0 0 4px" }}>Freelancer Dashboard</h1>
+        <Chip tone="gold"><ShieldCheck size={12} /> Freelancer Reputation ⭐ 4.8/5 · 27 completed · 96% on-time · 0 unresolved disputes</Chip>
+      </div>
+      {pendingAssignments.length > 0 && (
+        <div style={{ marginBottom: 22 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: C.muted, textTransform: "uppercase", letterSpacing: .4 }}>New Assignments — Action Needed</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {pendingAssignments.map((p) => (
+              <Card key={p.id} style={{ border: `1px solid rgba(201,162,39,.35)`, background: "rgba(201,162,39,.06)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{p.title}</div>
+                    <div style={{ color: C.muted, fontSize: 12.5 }}>From {p.client} · {money(p.total)} · {p.milestones.length} milestone{p.milestones.length === 1 ? "" : "s"}</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <Btn size="sm" variant="ghost" onClick={() => onOpen(p.id)}>View Details</Btn>
+                    <Btn size="sm" variant="green" onClick={() => onRespond(p.id, true)}><CheckCircle2 size={13} /> Accept</Btn>
+                    <Btn size="sm" variant="danger" onClick={() => onRespond(p.id, false)}><X size={13} /> Decline</Btn>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+      {needsChanges > 0 && (
+        <Card style={{ marginBottom: 18, border: `1px solid rgba(232,97,91,.35)`, background: "rgba(232,97,91,.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(232,97,91,.16)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <AlertTriangle size={16} color={C.red} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>Needs your attention</div>
+              <div style={{ color: C.muted, fontSize: 12.5 }}>{needsChanges} milestone{needsChanges > 1 ? "s" : ""} need{needsChanges > 1 ? "" : "s"} changes before they can be resubmitted</div>
+            </div>
+          </div>
+        </Card>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 26 }}>
+        <StatCard label="Active Projects" value={active.length} icon={LayoutGrid} />
+        <StatCard label="Milestones In Progress" value={inProgress} icon={Clock} />
+        <StatCard label="Total Earned" value={money(earned)} icon={Unlock} tone={C.green} />
+      </div>
+      <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: C.muted, textTransform: "uppercase", letterSpacing: .4 }}>Active Projects</h2>
+      {visibleProjects.length === 0 && <EmptyState text="No active projects. Once you accept an assignment, it will appear here." />}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {visibleProjects.map((p) => <ProjectRow key={p.id} p={p} onOpen={onOpen} perspective="freelancer" />)}
+      </div>
+    </div>
+  );
+}
+
+/* ============================== TRANSACTIONS ============================== */
+function TransactionsView({ projects }) {
+  const all = projects.flatMap((p) => p.transactions.map((t) => ({ ...t, project: p.title })));
+  return (
+    <div>
+      <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, marginBottom: 4 }}>Transaction History</h1>
+      <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>All entries below are demo transactions on a simulated testnet — no real funds move.</p>
+      {all.length === 0 && <EmptyState text="No transactions yet." />}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {all.slice().reverse().map((t) => (
+          <Card key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 14, flexWrap: "wrap", gap: 8 }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 13.5 }}>{t.type}</div>
+              <div style={{ color: C.faint, fontSize: 11.5 }}>{t.project} · {t.date}</div>
+            </div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: C.muted, textAlign: "right" }}>
+              <div style={{ color: C.text, fontWeight: 600, fontFamily: FONT_BODY, fontSize: 13.5 }}>{t.amount ? money(t.amount) : "—"}</div>
+              <div>{t.wallet}</div>
+              <div>{t.txId}</div>
+            </div>
+            <Chip tone="green">{t.status}</Chip>
+            {t.demo && <Chip tone="muted">Demo Tx</Chip>}
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ============================== CREATE PROJECT MODAL ============================== */
+function CreateProjectModal({ onClose, onCreate }) {
+  const [step, setStep] = useState(1);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [freelancer, setFreelancer] = useState("");
+  const [deadline, setDeadline] = useState("");
+  const [milestones, setMilestones] = useState([{ name: "", description: "", amount: "", deadline: "" }]);
+  const [refundRules, setRefundRules] = useState(["Missed deadline by 3+ days → 20% partial refund on that milestone", "Cancelled before work begins → full refund"]);
+  const [busy, setBusy] = useState(false);
+
+  const allRules = [
+    "Missed deadline by 3+ days → 20% partial refund on that milestone",
+    "Cancelled before work begins → full refund",
+    "Rejected after maximum revisions → eligible for dispute",
+    "Mutual cancellation → refund remaining escrow balance",
+  ];
+
+  const updateMs = (i, field, val) => setMilestones((ms) => ms.map((m, idx) => (idx === i ? { ...m, [field]: val } : m)));
+  const addMs = () => setMilestones((ms) => [...ms, { name: "", description: "", amount: "", deadline: "" }]);
+  const removeMs = (i) => setMilestones((ms) => ms.filter((_, idx) => idx !== i));
+  const total = milestones.reduce((s, m) => s + Number(m.amount || 0), 0);
+
+  /* ---- Date validation: deadlines must be today or later, and within 12 months ----
+     `min`/`max` on the input stop the picker offering past or too-far-out dates, but
+     a date can still be typed by hand, so every date is re-checked here and the step
+     is blocked with a plain-language message until it's fixed. */
+  const TODAY = todayISO();
+  const MAX_DEADLINE = maxDeadlineISO();
+  const deadlineIsPast = isPastDate(deadline);
+  const deadlineIsTooFar = isTooFarDate(deadline);
+  const pastMilestones = milestones
+    .map((m, i) => ({ m, i }))
+    .filter(({ m }) => isPastDate(m.deadline));
+  const tooFarMilestones = milestones
+    .map((m, i) => ({ m, i }))
+    .filter(({ m }) => isTooFarDate(m.deadline));
+  const lateMilestones = milestones
+    .map((m, i) => ({ m, i }))
+    .filter(({ m }) => m.deadline && deadline && m.deadline > deadline);
+  const datesValid = !deadlineIsPast && !deadlineIsTooFar && pastMilestones.length === 0 && tooFarMilestones.length === 0;
+  const dateErrors = [];
+  if (deadlineIsPast) dateErrors.push(`The project deadline (${prettyDate(deadline)}) is in the past. Please choose today or a future date.`);
+  if (deadlineIsTooFar) dateErrors.push(`The project deadline (${prettyDate(deadline)}) is more than 12 months out. Please choose a date up to ${prettyDate(MAX_DEADLINE)}.`);
+  pastMilestones.forEach(({ m, i }) => dateErrors.push(`Milestone ${i + 1}${m.name ? ` — "${m.name}"` : ""} is due ${prettyDate(m.deadline)}, which is in the past. Please choose a future date.`));
+  tooFarMilestones.forEach(({ m, i }) => dateErrors.push(`Milestone ${i + 1}${m.name ? ` — "${m.name}"` : ""} is due ${prettyDate(m.deadline)}, which is more than 12 months out. Please choose a date up to ${prettyDate(MAX_DEADLINE)}.`));
+
+  const dateInputStyle = (bad) => (bad ? { ...inputStyle, borderColor: C.red } : inputStyle);
+
+  const valid = title && freelancer && deadline && milestones.every((m) => m.name && m.amount) && datesValid;
+
+  return (
+    <Modal title="Create Escrow Project" onClose={onClose} width={640}>
+      {step === 1 && (
+        <div>
+          <Field label="Project Title"><input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Website Development" /></Field>
+          <Field label="Description"><textarea style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What does this project involve?" /></Field>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label="Freelancer"><input style={inputStyle} value={freelancer} onChange={(e) => setFreelancer(e.target.value)} placeholder="e.g. Sarah Chen" /></Field>
+            <Field label="Deadline"><input type="date" style={dateInputStyle(deadlineIsPast || deadlineIsTooFar)} value={deadline} min={TODAY} max={MAX_DEADLINE} onWheel={(e) => e.target.blur()} onChange={(e) => setDeadline(e.target.value)} /></Field>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "16px 0 8px" }}>
+            <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Milestones</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: C.gold }}>Total: {money(total)}</div>
+          </div>
+          {milestones.map((m, i) => (
+            <div key={i} style={{ background: C.bgAlt, border: `1px solid ${C.borderSoft}`, borderRadius: 10, padding: 12, marginBottom: 8 }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <input style={{ ...inputStyle, flex: 2 }} placeholder="Milestone name" value={m.name} onChange={(e) => updateMs(i, "name", e.target.value)} />
+                {/* onWheel blur: without it, scrolling the page while this field has
+                    focus silently increments/decrements the amount (300 -> 299). */}
+                <input style={{ ...inputStyle, flex: 1 }} type="number" min="0" step="any" placeholder="$ amount" value={m.amount} onWheel={(e) => e.target.blur()} onChange={(e) => updateMs(i, "amount", e.target.value)} />
+                {milestones.length > 1 && <button onClick={() => removeMs(i)} style={{ background: "none", border: "none", color: C.faint }}><Trash2 size={15} /></button>}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input style={{ ...inputStyle, flex: 2 }} placeholder="What must be delivered for this milestone?" value={m.description} onChange={(e) => updateMs(i, "description", e.target.value)} />
+                <input style={{ ...dateInputStyle(isPastDate(m.deadline) || isTooFarDate(m.deadline)), flex: 1 }} type="date" value={m.deadline} min={TODAY} max={MAX_DEADLINE} onWheel={(e) => e.target.blur()} onChange={(e) => updateMs(i, "deadline", e.target.value)} />
+              </div>
+            </div>
+          ))}
+          <Btn variant="subtle" size="sm" onClick={addMs}><Plus size={13} /> Add Milestone</Btn>
+
+          <div style={{ margin: "18px 0 8px", fontSize: 12, color: C.muted, fontWeight: 600 }}>Smart Refund Rules</div>
+          {allRules.map((r) => (
+            <label key={r} style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 12.5, color: C.muted, marginBottom: 6, cursor: "pointer" }}>
+              <input type="checkbox" checked={refundRules.includes(r)} onChange={(e) => setRefundRules((rr) => e.target.checked ? [...rr, r] : rr.filter((x) => x !== r))} style={{ marginTop: 2 }} />
+              {r}
+            </label>
+          ))}
+
+          {dateErrors.length > 0 && (
+            <div style={{ marginTop: 16, background: "rgba(232,97,91,.08)", border: `1px solid rgba(232,97,91,.35)`, borderRadius: 10, padding: "10px 12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, color: C.red, fontWeight: 700, fontSize: 12.5, marginBottom: dateErrors.length ? 6 : 0 }}>
+                <AlertTriangle size={13} /> Please pick a valid date
+              </div>
+              {dateErrors.map((msg, i) => (
+                <div key={i} style={{ color: C.muted, fontSize: 12.5, lineHeight: 1.5 }}>• {msg}</div>
+              ))}
+            </div>
+          )}
+          {dateErrors.length === 0 && lateMilestones.length > 0 && (
+            <div style={{ marginTop: 16, background: "rgba(201,162,39,.07)", border: `1px solid rgba(201,162,39,.3)`, borderRadius: 10, padding: "10px 12px", color: C.goldSoft, fontSize: 12.5, lineHeight: 1.5 }}>
+              <strong>Heads up:</strong> {lateMilestones.length === 1 ? "a milestone is" : `${lateMilestones.length} milestones are`} due after the project deadline ({prettyDate(deadline)}). You can still continue — the risk assessment will flag it.
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
+            <Btn disabled={!valid} onClick={() => setStep(2)}>Continue <ArrowRight size={14} /></Btn>
+          </div>
+        </div>
+      )}
+      {step === 2 && (
+        <div>
+          <p style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>Review your project, then EscrowX will use AI to draft a structured smart agreement for both parties to accept.</p>
+          <Card style={{ background: C.bgAlt, marginBottom: 16 }}>
+            <div style={{ fontWeight: 700, marginBottom: 4, color: C.text }}>{title}</div>
+            <div style={{ color: C.muted, fontSize: 12.5, marginBottom: 10 }}>{description}</div>
+            <div style={{ fontSize: 12.5, color: C.muted }}>Freelancer: {freelancer} · Deadline: {deadline}</div>
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+              {milestones.map((m, i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: C.text }}><span>{i + 1}. {m.name}</span><span style={{ fontFamily: FONT_MONO }}>{money(m.amount)}</span></div>)}
+            </div>
+            <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 10, paddingTop: 8, display: "flex", justifyContent: "space-between", fontWeight: 700, color: C.text }}><span>Total</span><span>{money(total)}</span></div>
+          </Card>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <Btn variant="ghost" onClick={() => setStep(1)}>Back</Btn>
+            <Btn disabled={busy} onClick={async () => { setBusy(true); await onCreate({ title, description, freelancer, deadline, milestones, refundRules }); }}>
+              {busy ? <><Loader2 size={14} className="spin" /> Creating…</> : <>Generate Smart Agreement with AI <Sparkles size={14} /></>}
+            </Btn>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+/* ============================== PROJECT DETAIL ============================== */
+function ProjectDetail({ project: p, role, onAcceptAssignment, onDeclineAssignment, onGenerateAgreement, onDeposit, onSubmitDeliverable, onAnalyze, onApprove, onRevision, onDispute, onResolveDispute, onBack }) {
+  const [tab, setTab] = useState("overview");
+  const released = p.milestones.filter((m) => m.status === "Paid").reduce((s, m) => s + m.amount, 0);
+  const secured = p.total - released;
+
+  return (
+    <div>
+      <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 12.5, marginBottom: 12, display: "flex", alignItems: "center", gap: 4 }}>&larr; Back</button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+        <div>
+          <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, margin: "0 0 6px" }}>{p.title}</h1>
+          <div style={{ color: C.muted, fontSize: 13 }}>{p.client} → {p.freelancer} · Due {p.deadline}</div>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {(p.assignmentStatus || "Accepted") === "Pending" && <Chip tone="gold"><Clock size={12} /> Awaiting Acceptance</Chip>}
+          {p.assignmentStatus === "Declined" && <Chip tone="red"><X size={12} /> Declined</Chip>}
+          <RiskBadge risk={p.riskScore} />
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 6, marginBottom: 18, borderBottom: `1px solid ${C.borderSoft}`, flexWrap: "wrap" }}>
+        {["overview", "milestones", "agreement", "activity"].map((t) => (
+          <button key={t} onClick={() => setTab(t)} style={{ background: "none", border: "none", borderBottom: tab === t ? `2px solid ${C.gold}` : "2px solid transparent", color: tab === t ? C.text : C.muted, padding: "9px 4px", fontSize: 13, fontWeight: 600, textTransform: "capitalize", marginRight: 14 }}>{t}</button>
+        ))}
+      </div>
+
+      {tab === "overview" && (
+        <div>
+          {(p.assignmentStatus || "Accepted") === "Pending" ? (
+            <Card style={{ marginBottom: 18, textAlign: "center", padding: 30 }}>
+              {role === "freelancer" ? (
+                <>
+                  <UserCircle2 size={22} color={C.gold} style={{ marginBottom: 10 }} />
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>{p.client} wants to assign you this project</div>
+                  <div style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>Review the milestones and total value below, then accept or decline. Nothing moves into escrow until you accept.</div>
+                  <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                    <Btn variant="green" onClick={onAcceptAssignment}><CheckCircle2 size={14} /> Accept Project</Btn>
+                    <Btn variant="danger" onClick={onDeclineAssignment}><X size={14} /> Decline</Btn>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Clock size={22} color={C.gold} style={{ marginBottom: 10 }} />
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Awaiting freelancer response</div>
+                  <div style={{ color: C.muted, fontSize: 13 }}>{p.freelancer} has been notified of this assignment. The smart agreement and escrow deposit unlock once they accept.</div>
+                </>
+              )}
+            </Card>
+          ) : p.assignmentStatus === "Declined" ? (
+            <Card style={{ marginBottom: 18, textAlign: "center", padding: 30, border: `1px solid rgba(232,97,91,.3)`, background: "rgba(232,97,91,.06)" }}>
+              <AlertTriangle size={22} color={C.red} style={{ marginBottom: 10 }} />
+              <div style={{ fontWeight: 700, marginBottom: 6, color: C.red }}>Project declined</div>
+              <div style={{ color: C.muted, fontSize: 13 }}>
+                {role === "client"
+                  ? `${p.freelancer} declined this assignment. Create a new project to assign it to a different freelancer.`
+                  : `You declined this assignment. The client has been notified.`}
+              </div>
+            </Card>
+          ) : !p.escrow?.deposited ? (
+            <Card style={{ marginBottom: 18, textAlign: "center", padding: 30 }}>
+              {!p.agreement ? (
+                <>
+                  <Sparkles size={22} color={C.gold} style={{ marginBottom: 10 }} />
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>No agreement yet</div>
+                  <div style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>Generate a structured smart agreement before funding escrow.</div>
+                  <Btn onClick={onGenerateAgreement} disabled={p.agreementLoading}>{p.agreementLoading ? <><Loader2 size={14} /> Drafting…</> : <>Generate Smart Agreement with AI <Sparkles size={14} /></>}</Btn>
+                </>
+              ) : role === "client" ? (
+                <>
+                  <Lock size={22} color={C.gold} style={{ marginBottom: 10 }} />
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Escrow Amount: {money(p.total)}</div>
+                  <div style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>Agreement accepted. Deposit funds to lock them in escrow.</div>
+                  <Btn onClick={onDeposit} disabled={p.depositLoading}>{p.depositLoading ? <><Loader2 size={14} /> Processing…</> : <><Wallet size={14} /> Deposit to Escrow</>}</Btn>
+                </>
+              ) : (
+                <div style={{ color: C.muted, fontSize: 13 }}>Waiting on client to fund escrow.</div>
+              )}
+            </Card>
+          ) : (
+            <Card style={{ marginBottom: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, color: C.green, fontWeight: 700 }}><CheckCircle2 size={16} /> Funds secured in escrow</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 10, marginBottom: 12, fontSize: 12.5 }}>
+                <div><div style={{ color: C.faint }}>Amount</div><div style={{ fontWeight: 600 }}>{money(p.escrow.amount)}</div></div>
+                <div><div style={{ color: C.faint }} title="A unique reference number for this deposit, like an order number.">Escrow ID</div><div style={{ fontFamily: FONT_MONO }}>{p.escrow.escrowId}</div></div>
+                <div><div style={{ color: C.faint }}>Status</div><div title="Simulated for this demo — no real funds moved.">{p.escrow.txStatus}</div></div>
+                <div><div style={{ color: C.faint }}>Timestamp</div><div>{p.escrow.timestamp}</div></div>
+              </div>
+              <ChainReceipt label="Demo Transaction · Escrow Deposit" hash={p.escrow.walletAddress} wallet={shortAddr(p.escrow.walletAddress)} network={p.escrow.network} />
+            </Card>
+          )}
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12, marginBottom: 18 }}>
+            <StatCard label="Paid to Freelancer" value={money(released)} sub="Released from escrow — done" tone={C.green} icon={Unlock} />
+            <StatCard label="Still Locked in Escrow" value={money(secured)} sub="Not paid out yet" tone={C.gold} icon={Lock} />
+            <StatCard label="Total Project Value" value={money(p.total)} />
+          </div>
+          <div style={{ width: "100%", height: 8, background: C.surface2, borderRadius: 6, overflow: "hidden", marginBottom: 6 }}>
+            <div style={{ width: `${(released / p.total) * 100}%`, height: "100%", background: C.green }} />
+          </div>
+          <div style={{ fontSize: 11.5, color: C.faint, marginBottom: 20 }}>{money(released)} of {money(p.total)} paid out to freelancer so far</div>
+
+          <RiskPanel risk={p.riskScore} />
+        </div>
+      )}
+
+      {tab === "milestones" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {p.milestones.map((m, i) => (
+            <MilestoneCard key={m.id} m={m} index={i} role={role} project={p}
+              onSubmit={(d) => onSubmitDeliverable(m.id, d)} onAnalyze={() => onAnalyze(m.id)}
+              onApprove={() => onApprove(m.id)} onRevision={() => onRevision(m.id)}
+              onDispute={(c, f) => onDispute(m.id, c, f)} onResolveDispute={onResolveDispute} />
+          ))}
+        </div>
+      )}
+
+      {tab === "agreement" && (
+        <Card>
+          {p.agreement ? (
+            <>
+              <pre style={{ whiteSpace: "pre-wrap", fontFamily: FONT_BODY, fontSize: 13, lineHeight: 1.7, color: C.text, margin: 0 }}>{p.agreement}</pre>
+              {p.refundRules?.length > 0 && (
+                <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.borderSoft}` }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>Smart Refund Rules</div>
+                  {p.refundRules.map((r) => <div key={r} style={{ fontSize: 12.5, color: C.muted, marginBottom: 4 }}>• {r}</div>)}
+                </div>
+              )}
+            </>
+          ) : <div style={{ color: C.faint, fontSize: 13 }}>No agreement generated yet.</div>}
+        </Card>
+      )}
+
+      {tab === "activity" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          {p.activity.slice().reverse().map((a, i) => (
+            <div key={i} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: `1px solid ${C.borderSoft}` }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.gold, marginTop: 5, flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: 13, color: C.text }}>{a.text}</div>
+                <div style={{ fontSize: 11, color: C.faint }}>{a.date}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================== MILESTONE CARD ============================== */
+function MilestoneCard({ m, index, role, project, onSubmit, onAnalyze, onApprove, onRevision, onDispute, onResolveDispute }) {
+  const [expanded, setExpanded] = useState(false);
+  const [showSubmit, setShowSubmit] = useState(false);
+  const [showDispute, setShowDispute] = useState(false);
+  const dispute = project.disputes.find((d) => d.milestoneId === m.id && d.status === "Open");
+
+  return (
+    <Card>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => setExpanded((e) => !e)}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontFamily: FONT_MONO, color: C.faint, fontSize: 12 }}>{index + 1}</span>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14.5 }}>{m.name}</div>
+            <div style={{ color: (m.status === "Paid" && role === "freelancer") ? C.green : C.muted, fontSize: 12, fontWeight: (m.status === "Paid" && role === "freelancer") ? 600 : 400 }}>
+              {m.status === "Paid" && role === "freelancer" ? `✓ ${money(m.amount)} received` : `${money(m.amount)} · due ${m.deadline}`}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <Stamp status={m.status} role={role} />
+          {expanded ? <ChevronDown size={16} color={C.faint} /> : <ChevronRight size={16} color={C.faint} />}
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="fade-up" style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.borderSoft}` }}>
+          <div style={{ color: C.muted, fontSize: 13, marginBottom: 14, lineHeight: 1.5 }}>{m.description}</div>
+
+          {role === "freelancer" && m.status === "Paid" && (
+            <div style={{ background: "rgba(63,191,143,.08)", border: `1px solid rgba(63,191,143,.3)`, borderRadius: 10, padding: 14, marginBottom: 14, display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(63,191,143,.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Unlock size={16} color={C.green} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: C.green }}>Payment Received: {money(m.amount)}</div>
+                <div style={{ fontSize: 11.5, color: C.faint }}>{m.paidAt ? `Released to your wallet on ${m.paidAt}` : "Released to your wallet"} · from escrow</div>
+              </div>
+            </div>
+          )}
+
+          {m.deliverable && (
+            <div style={{ background: C.bgAlt, borderRadius: 10, padding: 12, marginBottom: 12, fontSize: 12.5 }}>
+              <div style={{ color: C.faint, marginBottom: 4 }}>Submitted deliverable ({m.deliverable.type})</div>
+              <div style={{ color: C.text }}>{m.deliverable.content}</div>
+            </div>
+          )}
+
+          {m.analyzing && <div style={{ display: "flex", alignItems: "center", gap: 8, color: C.gold, fontSize: 13, marginBottom: 12 }}><Loader2 size={14} /> Analyzing deliverable with AI…</div>}
+
+          {m.aiAnalysis && (
+            <div style={{ background: "rgba(201,162,39,.06)", border: `1px solid rgba(201,162,39,.25)`, borderRadius: 10, padding: 14, marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 13, marginBottom: 10, color: C.goldSoft }}><Sparkles size={13} /> Deliverable Analysis</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 10 }}>
+                {m.aiAnalysis.checks.map((c, i) => (
+                  <div key={i} style={{ fontSize: 12.5, display: "flex", gap: 7, alignItems: "flex-start" }}>
+                    <span>{c.pass === true ? "✓" : c.pass === "warn" ? "⚠" : "✗"}</span><span style={{ color: C.muted }}>{c.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 18, fontSize: 12.5, marginBottom: 8 }}>
+                <div><span style={{ color: C.faint }}>AI Confidence</span><div style={{ fontFamily: FONT_DISPLAY, fontSize: 18 }}>{m.aiAnalysis.confidence}%</div></div>
+                <div><span style={{ color: C.faint }}>Recommendation</span><div style={{ fontWeight: 600 }}>{m.aiAnalysis.recommendation}</div></div>
+              </div>
+              <div style={{ fontSize: 11.5, color: C.faint }}>{m.aiAnalysis.notes} — AI recommends only; the client makes the final decision.</div>
+            </div>
+          )}
+
+          {dispute && <DisputeCard dispute={dispute} role={role} onResolve={(full) => onResolveDispute(dispute.id, full)} />}
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            {role === "freelancer" && ["Pending", "In Progress", "Revision Required"].includes(m.status) && (
+              <Btn size="sm" onClick={() => setShowSubmit(true)}><Upload size={13} /> Submit Deliverable</Btn>
+            )}
+            {role === "freelancer" && m.status === "Submitted" && (
+              <Btn size="sm" onClick={onAnalyze}><Sparkles size={13} /> Analyze Deliverable with AI</Btn>
+            )}
+            {role === "client" && m.status === "Client Review" && (
+              <>
+                <Btn size="sm" variant="green" onClick={onApprove}><CheckCircle2 size={13} /> Approve & Release {money(m.amount)}</Btn>
+                <Btn size="sm" variant="ghost" onClick={onRevision}>Request Revision</Btn>
+              </>
+            )}
+            {m.status === "Paid" && <Chip tone="green"><CheckCircle2 size={12} /> Paid</Chip>}
+          </div>
+          {(m.status === "Client Review" || m.status === "Revision Required") && !dispute && (
+            <button onClick={() => setShowDispute(true)} style={{ background: "none", border: "none", color: C.faint, fontSize: 11.5, marginTop: 10, textDecoration: "underline", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
+              <Gavel size={11} /> Not satisfied? Raise a dispute instead
+            </button>
+          )}
+
+          {showSubmit && <SubmitModal onClose={() => setShowSubmit(false)} onSubmit={(d) => { onSubmit(d); setShowSubmit(false); }} />}
+          {showDispute && <DisputeModal onClose={() => setShowDispute(false)} onSubmit={(c, f) => { onDispute(c, f); setShowDispute(false); }} />}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function SubmitModal({ onClose, onSubmit }) {
+  const [type, setType] = useState("text");
+  const [content, setContent] = useState("");
+  return (
+    <Modal title="Submit Deliverable" onClose={onClose} width={480}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+        {[{ k: "text", i: FileText, l: "Description" }, { k: "link", i: LinkIcon, l: "Link" }, { k: "file", i: Upload, l: "File" }].map((o) => (
+          <button key={o.k} onClick={() => setType(o.k)} style={{ flex: 1, background: type === o.k ? C.surface2 : "transparent", border: `1px solid ${type === o.k ? C.gold : C.border}`, borderRadius: 9, padding: "9px 6px", color: type === o.k ? C.text : C.muted, fontSize: 12, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <o.i size={14} /> {o.l}
+          </button>
+        ))}
+      </div>
+      <Field label={type === "file" ? "File name" : type === "link" ? "URL" : "Description of work completed"}>
+        <textarea style={{ ...inputStyle, minHeight: 90, resize: "vertical" }} value={content} onChange={(e) => setContent(e.target.value)} placeholder={type === "file" ? "e.g. final-delivery.zip" : type === "link" ? "https://..." : "Describe what was completed for this milestone..."} />
+      </Field>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <Btn disabled={!content.trim()} onClick={() => onSubmit({ type, content })}>Submit <Send size={13} /></Btn>
+      </div>
+    </Modal>
+  );
+}
+
+function DisputeModal({ onClose, onSubmit }) {
+  const [claim, setClaim] = useState("");
+  const [response, setResponse] = useState("");
+  return (
+    <Modal title="Raise Dispute" onClose={onClose} width={520}>
+      <p style={{ color: C.muted, fontSize: 12.5, marginBottom: 14 }}>Describe both sides so the AI dispute assistant can produce a fair, non-binding recommendation.</p>
+      <Field label="Client's claim / concern"><textarea style={{ ...inputStyle, minHeight: 70 }} value={claim} onChange={(e) => setClaim(e.target.value)} placeholder="e.g. The mobile version was not completed." /></Field>
+      <Field label="Freelancer's response"><textarea style={{ ...inputStyle, minHeight: 70 }} value={response} onChange={(e) => setResponse(e.target.value)} placeholder="e.g. Mobile version was completed but needs browser fixes." /></Field>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <Btn variant="danger" disabled={!claim.trim() || !response.trim()} onClick={() => onSubmit(claim, response)}><Gavel size={13} /> Submit for AI Review</Btn>
+      </div>
+    </Modal>
+  );
+}
+
+function DisputeCard({ dispute, role, onResolve }) {
+  return (
+    <div style={{ background: "rgba(232,97,91,.06)", border: `1px solid rgba(232,97,91,.3)`, borderRadius: 10, padding: 14, marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 13, marginBottom: 10, color: C.red }}><Gavel size={13} /> AI Dispute Summary</div>
+      <div style={{ fontSize: 12.5, marginBottom: 6 }}><span style={{ color: C.faint }}>Client claim: </span>{dispute.clientClaim}</div>
+      <div style={{ fontSize: 12.5, marginBottom: 10 }}><span style={{ color: C.faint }}>Freelancer response: </span>{dispute.freelancerResponse}</div>
+      {dispute.loading ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: C.gold, fontSize: 12.5 }}><Loader2 size={13} /> AI reviewing evidence…</div>
+      ) : (
+        <>
+          <div style={{ fontSize: 12.5, marginBottom: 6, color: C.muted }}>{dispute.aiSummary}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 10, color: C.goldSoft }}>Recommendation: {dispute.aiRecommendation}</div>
+          {role === "client" && (
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn size="sm" variant="green" onClick={() => onResolve(true)}>Accept & Release Payment</Btn>
+              <Btn size="sm" variant="ghost" onClick={() => onResolve(false)}>Request Revision Instead</Btn>
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: C.faint, marginTop: 8 }}>AI recommends only — the client makes the final, irreversible decision.</div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ============================== AI ASSISTANT ============================== */
+function AssistantPanel({ project, onClose }) {
+  const [messages, setMessages] = useState([
+    { role: "ai", text: project ? `I can answer questions about "${project.title}" — payments, milestones, deadlines, or disputes.` : "Connect a project to ask questions, or ask me anything about how EscrowX works." },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const endRef = useRef(null);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  const send = async () => {
+    if (!input.trim()) return;
+    const q = input.trim();
+    setMessages((m) => [...m, { role: "user", text: q }]);
+    setInput(""); setLoading(true);
+    const context = project ? `Project: "${project.title}". Total: $${project.total}. Milestones: ${project.milestones.map((m) => `${m.name} ($${m.amount}) — ${m.status}`).join("; ")}. Escrow funded: ${project.escrow?.deposited ? "yes" : "no"}. Refund rules: ${(project.refundRules || []).join("; ")}.` : "No specific project is open.";
+    const prompt = `You are the EscrowX AI assistant embedded in a Web3 freelance escrow platform. Answer the user's question using ONLY the project data given, in 1-3 concise sentences, in a helpful and direct tone. Do not invent data not provided.
+${context}
+Question: "${q}"`;
+    const ans = await callClaude(prompt);
+    setMessages((m) => [...m, { role: "ai", text: ans || "I couldn't reach the AI service just now — please try again in a moment." }]);
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", right: 0, top: 0, bottom: 0, width: "min(380px,100%)", background: C.surface, borderLeft: `1px solid ${C.border}`, zIndex: 120, display: "flex", flexDirection: "column" }}>
+      <div style={{ padding: 16, borderBottom: `1px solid ${C.borderSoft}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700 }}><Sparkles size={15} color={C.gold} /> EscrowX Assistant</div>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted }}><X size={18} /></button>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+        {messages.map((m, i) => (
+          <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%", background: m.role === "user" ? C.gold : C.surface2, color: m.role === "user" ? "#1A1204" : C.text, borderRadius: 12, padding: "9px 12px", fontSize: 13, lineHeight: 1.45 }}>
+            {m.text}
+          </div>
+        ))}
+        {loading && <div style={{ alignSelf: "flex-start", color: C.faint, fontSize: 12.5, display: "flex", alignItems: "center", gap: 6 }}><Loader2 size={13} /> thinking…</div>}
+        <div ref={endRef} />
+      </div>
+      <div style={{ padding: 12, borderTop: `1px solid ${C.borderSoft}`, display: "flex", gap: 8 }}>
+        <input style={{ ...inputStyle, flex: 1 }} placeholder="Ask about this project…" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} />
+        <Btn size="sm" onClick={send} disabled={loading}><Send size={14} /></Btn>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== MOUNT ============================== */
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
