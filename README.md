@@ -53,7 +53,7 @@ We intentionally kept this as a **single HTML file** with everything (React, sty
 Since this is a single self-contained HTML file, there's nothing to install.
 
 1. Download / clone this repository.
-2. Open `EscrowX.html` directly in any modern browser (Chrome/Edge recommended).
+2. Open `index.html` directly in any modern browser (Chrome/Edge recommended).
 3. Click **"Explore Demo"** on the landing page.
 4. Use the role switch (Client / Freelancer) at the top to see both perspectives of the same demo project.
 
